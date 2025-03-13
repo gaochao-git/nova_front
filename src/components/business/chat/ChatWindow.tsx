@@ -1,8 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input, Button, Space, theme, message, Badge, Tooltip } from 'antd';
-import { 
-  SendOutlined, 
-  AudioOutlined, 
+import {
   RobotOutlined, 
   UserOutlined,
   CopyOutlined,
@@ -13,13 +11,11 @@ import {
   DislikeFilled,
   CloudUploadOutlined,
   LinkOutlined,
-  UpOutlined
 } from '@ant-design/icons';
 import { useTheme } from '@/lib/theme/theme.context';
 import { Bubble, Welcome, Attachments, Sender } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import type { AttachmentsProps } from '@ant-design/x';
-import type { ButtonProps } from 'antd';
 
 interface IMessage {
   id: string;
