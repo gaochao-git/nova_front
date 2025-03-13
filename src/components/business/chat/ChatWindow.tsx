@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Input, Button, Space, theme, message, Badge, Tooltip } from 'antd';
+import { Input, Button, Space, theme, message, Badge, Tooltip, Typography } from 'antd';
 import {
   RobotOutlined, 
   UserOutlined,
@@ -16,6 +16,7 @@ import { useTheme } from '@/lib/theme/theme.context';
 import { Bubble, Welcome, Attachments, Sender } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import type { AttachmentsProps } from '@ant-design/x';
+import markdownit from 'markdown-it';
 
 interface IMessage {
   id: string;
@@ -26,6 +27,9 @@ interface IMessage {
   disliked?: boolean;
   attachments?: GetProp<AttachmentsProps, 'items'>;
 }
+
+// 在 ChatWindow 组件外创建 markdown 实例
+const md = markdownit({ html: true, breaks: true });
 
 const ChatWindow = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
@@ -47,6 +51,13 @@ const ChatWindow = () => {
     scrollToBottom();
   }, [messages]);
 
+  // 添加 markdown 渲染函数
+  const renderMarkdown = (content: string) => (
+    <Typography>
+      <div dangerouslySetInnerHTML={{ __html: md.render(content) }} />
+    </Typography>
+  );
+
   const handleSend = async () => {
     if (!inputValue.trim() && attachments.length === 0) return;
 
@@ -60,7 +71,19 @@ const ChatWindow = () => {
 
     const assistantMessage: IMessage = {
       id: (Date.now() + 1).toString(),
-      content: '',
+      content: `
+# 标题
+这是一段带有 **粗体** 和 *斜体* 的文本。
+
+- 列表项 1
+- 列表项 2
+
+> 这是一段引用
+
+\`\`\`javascript
+console.log('这是代码块');
+\`\`\`
+`,
       type: 'assistant',
       timestamp: new Date(),
     };
@@ -79,7 +102,19 @@ const ChatWindow = () => {
             msg.id === assistantMessage.id
               ? {
                   ...msg,
-                  content: '我是智能运维助手，正在处理您的请求...',
+                  content: `# 欢迎使用智能运维助手！
+
+我可以帮助您解决以下问题：
+
+- 系统运维相关问题
+- 技术支持和建议
+- 故障诊断和解决方案
+
+> 请告诉我您需要什么帮助？
+
+\`\`\`tip
+您可以尝试询问具体的运维问题
+\`\`\``,
                   timestamp: new Date(),
                 }
               : msg
@@ -157,24 +192,8 @@ const ChatWindow = () => {
   const bubbleItems = messages.map(message => ({
     key: message.id,
     role: message.type,
-    content: (
-      <div>
-        <div>{message.content}</div>
-        {message.attachments && message.attachments.length > 0 && (
-          <div className="mt-2">
-            <Attachments
-              items={message.attachments}
-              disabled
-              styles={{
-                list: {
-                  marginTop: 8,
-                },
-              }}
-            />
-          </div>
-        )}
-      </div>
-    ),
+    content: message.content,
+    messageRender: message.type === 'assistant' ? renderMarkdown : undefined,
     loading: loading && message.type === 'assistant' && message.id === messages[messages.length - 1]?.id,
     typing: !loading && message.type === 'assistant',
     avatar: message.type === 'assistant' ? (
