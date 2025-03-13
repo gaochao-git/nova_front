@@ -74,8 +74,6 @@ const ChatWindow = () => {
     // 模拟AI助手回复
     try {
       setTimeout(() => {
-        if (!isGenerating) return; // 如果已经取消，就不更新消息
-        
         setMessages(prev => 
           prev.map(msg => 
             msg.id === assistantMessage.id
