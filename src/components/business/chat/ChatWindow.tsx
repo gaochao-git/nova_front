@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Input, Button, Space, theme, message, Badge } from 'antd';
+import { Input, Button, Space, theme, message, Badge, Tooltip } from 'antd';
 import { 
   SendOutlined, 
   AudioOutlined, 
@@ -12,12 +12,14 @@ import {
   LikeFilled,
   DislikeFilled,
   CloudUploadOutlined,
-  LinkOutlined
+  LinkOutlined,
+  UpOutlined
 } from '@ant-design/icons';
 import { useTheme } from '@/lib/theme/theme.context';
 import { Bubble, Welcome, Attachments, Sender } from '@ant-design/x';
 import type { GetProp } from 'antd';
 import type { AttachmentsProps } from '@ant-design/x';
+import type { ButtonProps } from 'antd';
 
 interface IMessage {
   id: string;
@@ -39,6 +41,7 @@ const ChatWindow = () => {
   const senderRef = useRef<any>(null);
   const { themeMode } = useTheme();
   const { token } = theme.useToken();
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -70,22 +73,32 @@ const ChatWindow = () => {
     setInputValue('');
     setAttachments([]);
     setLoading(true);
+    setIsGenerating(true);
 
     // 模拟AI助手回复
-    setTimeout(() => {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === assistantMessage.id
-            ? {
-                ...msg,
-                content: '我是智能运维助手，正在处理您的请求...',
-                timestamp: new Date(),
-              }
-            : msg
-        )
-      );
+    try {
+      setTimeout(() => {
+        if (!isGenerating) return; // 如果已经取消，就不更新消息
+        
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === assistantMessage.id
+              ? {
+                  ...msg,
+                  content: '我是智能运维助手，正在处理您的请求...',
+                  timestamp: new Date(),
+                }
+              : msg
+          )
+        );
+        setLoading(false);
+        setIsGenerating(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Error generating response:', error);
       setLoading(false);
-    }, 1000);
+      setIsGenerating(false);
+    }
   };
 
   const handleCopy = (content: string) => {
@@ -126,6 +139,25 @@ const ChatWindow = () => {
           : msg
       ));
     }, 1000);
+  };
+
+  const handleCancel = () => {
+    if (isGenerating) {
+      setIsGenerating(false); // 停止生成
+      setLoading(false);
+      // 更新最后一条助手消息
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.type === 'assistant') {
+          return prev.map((msg, index) => 
+            index === prev.length - 1
+              ? { ...msg, content: '回复已取消', timestamp: new Date() }
+              : msg
+          );
+        }
+        return prev;
+      });
+    }
   };
 
   const bubbleItems = messages.map(message => ({
@@ -297,34 +329,10 @@ const ChatWindow = () => {
           }
           value={inputValue}
           onChange={setInputValue}
+          loading={loading}
           onSubmit={handleSend}
-          actions={
-            <Space>
-              <Button
-                type="text"
-                icon={
-                  <AudioOutlined 
-                    className={`cursor-pointer hover:text-blue-500 transition-colors ${
-                      themeMode === 'dark' ? 'text-white/40' : 'text-gray-400'
-                    }`}
-                  />
-                }
-                onClick={() => {/* TODO: 实现语音输入 */}}
-              />
-              <Button
-                type="primary"
-                icon={<SendOutlined />}
-                onClick={handleSend}
-                loading={loading}
-              >
-                发送
-              </Button>
-            </Space>
-          }
-          style={{
-            background: themeMode === 'dark' ? '#141414' : '#fff',
-            borderColor: themeMode === 'dark' ? '#303030' : token.colorBorder,
-          }}
+          onCancel={handleCancel}
+          placeholder="请输入内容..."
         />
       </div>
     </div>
