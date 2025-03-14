@@ -237,7 +237,7 @@ function createDifyStream(message: string, inputs = {}, conversationId?: string,
     query: message,
     response_mode: 'streaming',
     conversation_id: conversationId,
-    user: 'system',
+    user: 'abc-123',
     files: files,
     system_prompt: systemPrompt,
   };
@@ -257,30 +257,7 @@ function createDifyStream(message: string, inputs = {}, conversationId?: string,
   });
 }
 
-// 添加停止消息生成的函数
-const stopMessageGeneration = async (messageId) => {
-  try {
-    const response = await fetch(`${baseUrl}/v1/chat-messages/${messageId}/stop`, {
-      method: 'POST',
-      headers: {
-        'Authorization': apiKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user: 'system'  // 使用与其他请求一致的 user
-      })
-    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Failed to stop message generation:', error);
-    throw error;
-  }
-};
 
 const Independent = () => {
   // ==================== Style ====================
@@ -314,18 +291,43 @@ const Independent = () => {
     }
   }, [activeKey]);
 
-  // 添加停止生成的处理函数
-  const handleStopGeneration = async () => {
-    if (messageId) {
-      try {
-        await stopMessageGeneration(messageId);
-        setIsLoading(false);
-        antMessage.success('已停止生成');
-      } catch (error) {
-        antMessage.error('停止生成失败');
+  // 添加停止消息生成的函数
+  const stopMessageGeneration = async () => {
+    try {
+      if (!taskId) {
+        console.error('No task ID available to stop generation');
+        return false;
       }
+      console.log('taskId:', taskId,"messageId:",messageId);
+      
+      const response = await fetch(`${baseUrl}/v1/chat-messages/${taskId}/stop`, {
+        method: 'POST',
+        headers: {
+          'Authorization': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user: 'abc-123'  // 使用与其他请求一致的 user
+        })
+      });
+      
+      const result = await response.json();
+      
+      // 根据返回结果判断是否成功停止
+      if (result.result === 'success') {
+        // 停止成功后将loading设置为false
+        setIsLoading(false);
+        return true;
+      } else {
+        console.error('Failed to stop message generation:', result.message || 'Unknown error');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to stop message generation:', error);
+      return false;
     }
   };
+
 
   // ==================== Event ====================
   const onRequest = (message) => {
@@ -413,9 +415,14 @@ const Independent = () => {
   const onSubmit = async (nextQuestion) => {
     if (!nextQuestion) return;
     
+    console.log('开始提交问题:', nextQuestion);
     setIsLoading(true);
     setLines([]);
-    setMessageId(undefined); // 重置消息ID
+    
+    // 重置消息ID并记录日志
+    console.log('重置前的messageId:', messageId);
+    setMessageId(undefined);
+    console.log('重置后的messageId:', undefined);
     
     // 添加用户消息并获取AI消息ID
     const aiMessageId = onRequest(nextQuestion);
@@ -424,35 +431,55 @@ const Independent = () => {
     try {
       // 传递附件文件ID列表，如果有的话
       const fileIds = attachedFiles.map(file => file.response?.id).filter(Boolean);
+      console.log('附件文件IDs:', fileIds);
+      
       // 传递当前会话ID，如果存在的话
+      console.log('当前会话ID:', conversationId);
+      
+      console.log('正在创建Dify流...');
       const readableStream = await createDifyStream(nextQuestion, {}, conversationId, fileIds);
       
       if (!readableStream) {
         throw new Error('无法从Dify API获取数据流');
       }
       
+      console.log('Dify流创建成功，开始读取数据');
       let fullResponse = '';
+      let chunkCount = 0;
       
       // Use XStream to read the stream
       for await (const chunk of XStream({
         readableStream,
       })) {
-        console.log(chunk);
+        chunkCount++;
+        console.log(`收到数据块 #${chunkCount}:`, chunk);
         setLines((pre) => [...pre, chunk]);
         
         try {
           const parsed = JSON.parse(chunk.data);
+          console.log(`数据块 #${chunkCount} 解析结果:`, parsed);
           
           // 提取会话ID、消息ID和任务ID
           if (parsed.conversation_id && !conversationId) {
+            console.log('设置会话ID:', parsed.conversation_id);
             setConversationId(parsed.conversation_id);
           }
           
           if (parsed.message_id && !messageId) {
+            console.log('发现消息ID:', parsed.message_id);
+            console.log('设置前的messageId状态:', messageId);
             setMessageId(parsed.message_id);
+            
+            // 由于setState是异步的，我们需要在下一个事件循环中检查
+            setTimeout(() => {
+              console.log('设置后的messageId状态:', messageId);
+            }, 0);
+            
+            console.log('消息ID已设置，现在可以停止生成');
           }
           
           if (parsed.task_id && !taskId) {
+            console.log('设置任务ID:', parsed.task_id);
             setTaskId(parsed.task_id);
           }
           
@@ -462,14 +489,17 @@ const Independent = () => {
             updateAIMessage(aiMessageId, fullResponse);
           }
         } catch (e) {
-          console.error('解析响应数据出错:', e);
+          console.error(`解析数据块 #${chunkCount} 出错:`, e);
         }
       }
+      
+      console.log('流读取完成，共处理数据块:', chunkCount);
     } catch (error) {
       console.error('读取Dify流时出错:', error);
       setLines([{ data: JSON.stringify({ event: 'error', message: error.message }) }]);
       updateAIMessage(aiMessageId, `Error: ${error.message}`);
     } finally {
+      console.log('流处理结束，最终messageId状态:', messageId);
       setIsLoading(false);
     }
   };
@@ -688,7 +718,7 @@ const Independent = () => {
           prefix={attachmentsNode}
           loading={isLoading}
           className={styles.sender}
-          onCancel={isLoading ? handleStopGeneration : undefined}
+          onCancel={isLoading ? stopMessageGeneration : undefined}
         />
       </div>
     </div>
