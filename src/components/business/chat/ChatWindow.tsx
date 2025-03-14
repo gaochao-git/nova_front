@@ -51,12 +51,8 @@ const WELCOME_RESPONSE = `# 欢迎使用智能运维助手！
 - 系统运维相关问题
 - 技术支持和建议
 - 故障诊断和解决方案
-
-> 请告诉我您需要什么帮助？
-
-\`\`\`tip
-您可以尝试询问具体的运维问题
-\`\`\``;
+# 欢迎使用智能运维助手！
+`;
 
 const ChatWindow = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
@@ -64,19 +60,10 @@ const ChatWindow = () => {
   const [loading, setLoading] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [attachments, setAttachments] = useState<GetProp<AttachmentsProps, 'items'>>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const senderRef = useRef<any>(null);
   const { themeMode } = useTheme();
   const { token } = theme.useToken();
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   // 添加 markdown 渲染函数
   const renderMarkdown = (content: string) => (
@@ -324,7 +311,7 @@ const ChatWindow = () => {
             }}
           />
         )}
-        <div ref={messagesEndRef} />
+        {/* <div ref={messagesEndRef} /> */}
       </div>
       <div className={`flex gap-2 p-2 rounded-lg border ${
         themeMode === 'dark' 
