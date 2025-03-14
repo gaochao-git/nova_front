@@ -7,9 +7,11 @@ import {
   Welcome,
   useXAgent,
   useXChat,
+  ThoughtChain,
+  XStream,
 } from '@ant-design/x';
 import { createStyles } from 'antd-style';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   CloudUploadOutlined,
   CommentOutlined,
@@ -21,8 +23,9 @@ import {
   ReadOutlined,
   ShareAltOutlined,
   SmileOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
-import { Badge, Button, Space, Typography } from 'antd';
+import { Badge, Button, Space, Splitter, Input, Typography } from 'antd';
 import markdownit from 'markdown-it';
 
 const renderTitle = (icon, title) => (
@@ -230,6 +233,35 @@ const renderMarkdown = (content: string) => (
   </Typography>
 );
 
+// Dify API configuration
+const baseUrl = 'http://127.0.0.1';
+const apiKey = 'Bearer app-s1LO3fgBHF0vJc0l9wbmutn8';
+const systemPrompt = '你是一个通用AI助手，可以回答各种日常问题。';
+
+function createDifyStream(message: string) {
+  const url = `${baseUrl}/v1/chat-messages`;
+  
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': apiKey,
+    },
+    body: JSON.stringify({
+      inputs: {},
+      query: message,
+      response_mode: 'streaming',
+      user: 'test-user',
+      system_prompt: systemPrompt,
+    }),
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error(`Dify API error: ${response.status}`);
+    }
+    return response.body;
+  });
+}
+
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
@@ -240,20 +272,22 @@ const Independent = () => {
   const [conversationsItems, setConversationsItems] = React.useState(defaultConversationsItems);
   const [activeKey, setActiveKey] = React.useState(defaultConversationsItems[0].key);
   const [attachedFiles, setAttachedFiles] = React.useState([]);
+  const [messages, setMessages] = React.useState([]);
+
+  // Add Dify state
+  const [lines, setLines] = React.useState<Record<string, string>[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const difyContent = lines.map((line) => {
+    try {
+      const parsed = JSON.parse(line.data);
+      return parsed.answer || '';
+    } catch (e) {
+      return '';
+    }
+  }).join('');
 
   // ==================== Runtime ====================
-  const [agent] = useXAgent({
-    request: async ({ message }, { onSuccess }) => {
-      onSuccess(`### 收到消息 ✨
-
-你说的是：**${message}**
-
-> 这是一个 markdown 格式的回复示例`);
-    },
-  });
-  const { onRequest, messages, setMessages } = useXChat({
-    agent,
-  });
   useEffect(() => {
     if (activeKey !== undefined) {
       setMessages([]);
@@ -261,10 +295,76 @@ const Independent = () => {
   }, [activeKey]);
 
   // ==================== Event ====================
-  const onSubmit = (nextContent) => {
+  const onRequest = (message) => {
+    // 添加用户消息到聊天
+    const userMessage = {
+      id: Date.now().toString(),
+      message,
+      status: 'local',
+    };
+    
+    // 添加一个空的AI消息占位符
+    const aiMessage = {
+      id: (Date.now() + 1).toString(),
+      message: '',
+      status: 'loading',
+    };
+    
+    setMessages((prev) => [...prev, userMessage, aiMessage]);
+    return aiMessage.id;
+  };
+  
+  const updateAIMessage = (id, message) => {
+    setMessages((prev) => 
+      prev.map((msg) => 
+        msg.id === id ? { ...msg, message, status: 'ai' } : msg
+      )
+    );
+  };
+
+  const onSubmit = async (nextContent) => {
     if (!nextContent) return;
-    onRequest(nextContent);
+    
+    setIsLoading(true);
+    setLines([]);
+    
+    // 添加用户消息并获取AI消息ID
+    const aiMessageId = onRequest(nextContent);
     setContent('');
+    
+    try {
+      const readableStream = await createDifyStream(nextContent);
+      
+      if (!readableStream) {
+        throw new Error('无法从Dify API获取数据流');
+      }
+      
+      let fullResponse = '';
+      
+      // Use XStream to read the stream
+      for await (const chunk of XStream({
+        readableStream,
+      })) {
+        console.log(chunk);
+        setLines((pre) => [...pre, chunk]);
+        
+        try {
+          const parsed = JSON.parse(chunk.data);
+          if (parsed.answer) {
+            fullResponse += parsed.answer;
+            updateAIMessage(aiMessageId, fullResponse);
+          }
+        } catch (e) {
+          console.error('解析响应数据出错:', e);
+        }
+      }
+    } catch (error) {
+      console.error('读取Dify流时出错:', error);
+      setLines([{ data: JSON.stringify({ event: 'error', message: error.message }) }]);
+      updateAIMessage(aiMessageId, `Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
   const onPromptsItemClick = (info) => {
     onRequest(info.data.description);
@@ -414,7 +514,7 @@ const Independent = () => {
           onSubmit={onSubmit}
           onChange={setContent}
           prefix={attachmentsNode}
-          loading={agent.isRequesting()}
+          loading={isLoading}
           className={styles.sender}
         />
       </div>
