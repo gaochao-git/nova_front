@@ -298,7 +298,11 @@ const Independent = () => {
         console.error('No task ID available to stop generation');
         return false;
       }
-      console.log('taskId:', taskId,"messageId:",messageId);
+      console.log('taskId:', taskId, "messageId:", messageId);
+      
+      // 找到当前正在加载的AI消息
+      const loadingMessage = messages.find(msg => msg.loading);
+      const loadingMessageId = loadingMessage?.id;
       
       const response = await fetch(`${baseUrl}/v1/chat-messages/${taskId}/stop`, {
         method: 'POST',
@@ -307,16 +311,22 @@ const Independent = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          user: 'abc-123'  // 使用与其他请求一致的 user
+          user: 'abc-123'
         })
       });
       
       const result = await response.json();
       
-      // 根据返回结果判断是否成功停止
+      // 设置isLoading为false
+      setIsLoading(false);
+      
+      // 使用updateAIMessage更新消息内容和loading状态
+      if (loadingMessageId && loadingMessage) {
+        // 假设updateAIMessage函数会将loading设置为false
+        updateAIMessage(loadingMessageId, loadingMessage.message + "\n\n[已被用户停止]");
+      }
+      
       if (result.result === 'success') {
-        // 停止成功后将loading设置为false
-        setIsLoading(false);
         return true;
       } else {
         console.error('Failed to stop message generation:', result.message || 'Unknown error');
@@ -324,6 +334,8 @@ const Independent = () => {
       }
     } catch (error) {
       console.error('Failed to stop message generation:', error);
+      // 即使出错也要设置isLoading为false
+      setIsLoading(false);
       return false;
     }
   };
@@ -346,7 +358,7 @@ const Independent = () => {
     const aiMessage = {
       id: (Date.now() + 1).toString(),
       message: '',
-      status: 'loading',
+      loading: true,  // 直接使用布尔值
       type: 'assistant',
       timestamp: new Date(),
       liked: false,
@@ -357,10 +369,10 @@ const Independent = () => {
     return aiMessage.id;
   };
   
-  const updateAIMessage = (id, message) => {
-    setMessages((prev) => 
-      prev.map((msg) => 
-        msg.id === id ? { ...msg, message, status: 'ai' } : msg
+  const updateAIMessage = (id, content) => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === id ? { ...msg, message: content, loading: false } : msg
       )
     );
   };
@@ -540,9 +552,9 @@ const Independent = () => {
       />
     </Space>
   );
-  const items = messages.map(({ id, message, status, type, timestamp, liked, disliked }) => ({
+  const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked }) => ({
     key: id,
-    loading: status === 'loading',
+    loading,  // 直接使用布尔值，不需要判断
     role: type === 'user' ? 'local' : 'ai',
     content: message,
     messageRender: renderMarkdown,
