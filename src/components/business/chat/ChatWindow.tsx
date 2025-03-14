@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import { Badge, Button, Space, Typography } from 'antd';
 import markdownit from 'markdown-it';
+import Image from 'next/image';
 
 const renderTitle = (icon, title) => (
   <Space align="start">
@@ -244,43 +245,7 @@ const Independent = () => {
   // ==================== Runtime ====================
   const [agent] = useXAgent({
     request: async ({ message }, { onSuccess }) => {
-      // Mock markdown response
-      const mockResponses = [
-        `# Hello! 👋
-Here's what I can help you with:
-* Writing code
-* Explaining concepts
-* Answering questions
-
-Try asking me something!`,
-
-        `## Markdown Demo
-Here's some **bold** and *italic* text.
-
-\`\`\`javascript
-// Code block example
-const greeting = "Hello World!";
-console.log(greeting);
-\`\`\`
-
-> This is a blockquote
-
-1. Ordered list
-2. With multiple items
-3. And numbers`,
-
-        `### Tables and Links
-| Feature | Support |
-|---------|---------|
-| Tables | ✅ |
-| Links | ✅ |
-| Images | ✅ |
-
-Learn more at [Ant Design X](https://x.ant.design)`,
-      ];
-      
-      const randomResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
-      onSuccess(`${randomResponse}\n\n---\nIn response to: ${message}`);
+      onSuccess(`Mock success return. You said: ${message}`);
     },
   });
   const { onRequest, messages, setMessages } = useXChat({
@@ -321,7 +286,7 @@ Learn more at [Ant Design X](https://x.ant.design)`,
     <Space direction="vertical" size={16} className={styles.placeholder}>
       <Welcome
         variant="borderless"
-        icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
+        icon={<img src="/images/image.png" alt="welcome" style={{ width: 24, height: 24 }} />}
         title="Hello, I'm Ant Design X"
         description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
         extra={
