@@ -418,8 +418,9 @@ const Independent = () => {
     setIsLoading(true);
     setLines([]);
     
-    // 重置消息ID并记录日志
+    // 重置消息ID和任务ID
     setMessageId(undefined);
+    setTaskId(undefined);
     
     // 添加用户消息并获取AI消息ID
     const aiMessageId = onRequest(nextQuestion);
