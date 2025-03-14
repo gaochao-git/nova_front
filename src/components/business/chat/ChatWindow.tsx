@@ -221,8 +221,18 @@ const baseUrl = 'http://127.0.0.1';
 const apiKey = 'Bearer app-s1LO3fgBHF0vJc0l9wbmutn8';
 const systemPrompt = '你是一个通用AI助手，可以回答各种日常问题。';
 
-function createDifyStream(message: string) {
+function createDifyStream(message: string, inputs = {}, conversationId?: string, files = []) {
   const url = `${baseUrl}/v1/chat-messages`;
+  
+  const requestBody = {
+    inputs: inputs || {},  // 使用传入的inputs或默认为空对象
+    query: message,
+    response_mode: 'streaming',
+    conversation_id: conversationId,
+    user: 'system',
+    files: files,
+    system_prompt: systemPrompt,
+  };
   
   return fetch(url, {
     method: 'POST',
@@ -230,13 +240,7 @@ function createDifyStream(message: string) {
       'Content-Type': 'application/json',
       'Authorization': apiKey,
     },
-    body: JSON.stringify({
-      inputs: {},
-      query: message,
-      response_mode: 'streaming',
-      user: 'test-user',
-      system_prompt: systemPrompt,
-    }),
+    body: JSON.stringify(requestBody),
   }).then(response => {
     if (!response.ok) {
       throw new Error(`Dify API error: ${response.status}`);
@@ -260,6 +264,9 @@ const Independent = () => {
   // Add Dify state
   const [lines, setLines] = React.useState<Record<string, string>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // 添加会话ID和消息ID的状态
+  const [conversationId, setConversationId] = useState<string | undefined>();
+  const [messageId, setMessageId] = useState<string | undefined>();
 
   // ==================== Runtime ====================
   useEffect(() => {
@@ -307,7 +314,10 @@ const Independent = () => {
     setContent('');
     
     try {
-      const readableStream = await createDifyStream(nextQuestion);
+      // 传递附件文件ID列表，如果有的话
+      const fileIds = attachedFiles.map(file => file.response?.id).filter(Boolean);
+      // 传递当前会话ID，如果存在的话
+      const readableStream = await createDifyStream(nextQuestion, {}, conversationId, fileIds);
       
       if (!readableStream) {
         throw new Error('无法从Dify API获取数据流');
@@ -324,6 +334,16 @@ const Independent = () => {
         
         try {
           const parsed = JSON.parse(chunk.data);
+          
+          // 提取会话ID和消息ID
+          if (parsed.conversation_id && !conversationId) {
+            setConversationId(parsed.conversation_id);
+          }
+          
+          if (parsed.message_id && !messageId) {
+            setMessageId(parsed.message_id);
+          }
+          
           if (parsed.answer) {
             fullResponse += parsed.answer;
             updateAIMessage(aiMessageId, fullResponse);
