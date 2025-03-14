@@ -485,11 +485,9 @@ const Independent = () => {
       }
       
     } catch (error) {
-      console.error('读取Dify流时出错:', error);
       setLines([{ data: JSON.stringify({ event: 'error', message: error.message }) }]);
       updateAIMessage(aiMessageId, `Error: ${error.message}`);
     } finally {
-      console.log('流处理结束，最终messageId状态:', messageId);
       setIsLoading(false);
     }
   };
