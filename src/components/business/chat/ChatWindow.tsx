@@ -15,16 +15,24 @@ import React, { useEffect, useState } from 'react';
 import {
   CloudUploadOutlined,
   CommentOutlined,
+  CopyOutlined,
+  DislikeOutlined,
+  DislikeFilled,
   EllipsisOutlined,
   FireOutlined,
   HeartOutlined,
+  LikeOutlined,
+  LikeFilled,
   PaperClipOutlined,
   PlusOutlined,
   ReadOutlined,
+  ReloadOutlined,
+  RobotOutlined,
   ShareAltOutlined,
   SmileOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
-import { Badge, Button, Space} from 'antd';
+import { Badge, Button, Space, message as antMessage, theme } from 'antd';
 // 导入渲染函数
 import { renderMarkdown } from '../markdown/MarkdownRenderer';
 
@@ -252,6 +260,8 @@ function createDifyStream(message: string, inputs = {}, conversationId?: string,
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
+  const { token } = theme.useToken();
+  const themeMode = token.colorBgContainer === '#ffffff' ? 'light' : 'dark';
 
   // ==================== State ====================
   const [headerOpen, setHeaderOpen] = React.useState(false);
@@ -272,6 +282,8 @@ const Independent = () => {
   useEffect(() => {
     if (activeKey !== undefined) {
       setMessages([]);
+      setConversationId(undefined);
+      setMessageId(undefined);
     }
   }, [activeKey]);
 
@@ -282,6 +294,10 @@ const Independent = () => {
       id: Date.now().toString(),
       message,
       status: 'local',
+      type: 'user',
+      timestamp: new Date(),
+      liked: false,
+      disliked: false,
     };
     
     // 添加一个空的AI消息占位符
@@ -289,6 +305,10 @@ const Independent = () => {
       id: (Date.now() + 1).toString(),
       message: '',
       status: 'loading',
+      type: 'assistant',
+      timestamp: new Date(),
+      liked: false,
+      disliked: false,
     };
     
     setMessages((prev) => [...prev, userMessage, aiMessage]);
@@ -301,6 +321,53 @@ const Independent = () => {
         msg.id === id ? { ...msg, message, status: 'ai' } : msg
       )
     );
+  };
+
+  // 处理复制消息内容
+  const handleCopy = (content) => {
+    navigator.clipboard.writeText(content)
+      .then(() => {
+        antMessage.success('已复制到剪贴板');
+      })
+      .catch(err => {
+        console.error('复制失败:', err);
+        antMessage.error('复制失败');
+      });
+  };
+
+  // 处理点赞
+  const handleLike = (messageId) => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, liked: !msg.liked, disliked: false } 
+          : msg
+      )
+    );
+  };
+
+  // 处理点踩
+  const handleDislike = (messageId) => {
+    setMessages(prev => 
+      prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, disliked: !msg.disliked, liked: false } 
+          : msg
+      )
+    );
+  };
+
+  // 处理重新生成回答
+  const handleRefresh = (messageId) => {
+    // 找到当前消息的前一条用户消息
+    const currentIndex = messages.findIndex(msg => msg.id === messageId);
+    if (currentIndex > 0) {
+      const userMessage = messages[currentIndex - 1];
+      // 删除当前消息及之后的所有消息
+      setMessages(prev => prev.slice(0, currentIndex));
+      // 重新提交用户消息
+      onSubmit(userMessage.message);
+    }
   };
 
   const onSubmit = async (nextQuestion) => {
@@ -408,12 +475,77 @@ const Independent = () => {
       />
     </Space>
   );
-  const items = messages.map(({ id, message, status }) => ({
+  const items = messages.map(({ id, message, status, type, timestamp, liked, disliked }) => ({
     key: id,
     loading: status === 'loading',
-    role: status === 'local' ? 'local' : 'ai',
+    role: type === 'user' ? 'local' : 'ai',
     content: message,
     messageRender: renderMarkdown,
+    avatar: type === 'assistant' ? (
+      <div style={{ background: token.colorPrimary, borderRadius: '50%', padding: 4 }}>
+        <RobotOutlined style={{ color: '#fff' }} />
+      </div>
+    ) : (
+      <div style={{ 
+        background: themeMode === 'dark' ? token.colorBgElevated : token.colorBgLayout, 
+        borderRadius: '50%', 
+        padding: 4 
+      }}>
+        <UserOutlined style={{ color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary }} />
+      </div>
+    ),
+    footer: (
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        <div style={{ 
+          fontSize: token.fontSizeSM, 
+          color: token.colorTextQuaternary 
+        }}>
+          {timestamp.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })}
+        </div>
+        {type === 'assistant' && (
+          <Space size={token.paddingXXS}>
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<CopyOutlined />} 
+              onClick={() => handleCopy(message)}
+            />
+            <Button 
+              type="text" 
+              size="small" 
+              icon={liked ? <LikeFilled /> : <LikeOutlined />}
+              onClick={() => handleLike(id)}
+              style={liked ? { color: token.colorPrimary } : {}}
+            />
+            <Button 
+              type="text" 
+              size="small" 
+              icon={disliked ? <DislikeFilled /> : <DislikeOutlined />}
+              onClick={() => handleDislike(id)}
+              style={disliked ? { color: token.colorError } : {}}
+            />
+            <Button 
+              type="text" 
+              size="small" 
+              icon={<ReloadOutlined />}
+              onClick={() => handleRefresh(id)}
+              style={{ 
+                color: token.colorTextQuaternary,
+                transition: 'color 0.3s'
+              }}
+            />
+          </Space>
+        )}
+      </div>
+    )
   }));
   const attachmentsNode = (
     <Badge dot={attachedFiles.length > 0 && !headerOpen}>
