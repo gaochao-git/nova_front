@@ -412,7 +412,7 @@ const Independent = () => {
     }
   };
 
-  const onSubmit = async (nextQuestion) => {
+  const onSubmit = async (nextQuestion: string) => {
     if (!nextQuestion) return;
     
     setIsLoading(true);
@@ -428,7 +428,6 @@ const Independent = () => {
     try {
       // 传递附件文件ID列表，如果有的话
       const fileIds = attachedFiles.map(file => file.response?.id).filter(Boolean);
-
       
       const readableStream = await createDifyStream(nextQuestion, {}, conversationId, fileIds);
       
@@ -439,7 +438,10 @@ const Independent = () => {
       let fullResponse = '';
       let chunkCount = 0;
       
-      // Use XStream to read the stream
+      // 使用一个布尔标志跟踪ID是否已设置
+      let idsSet = false;
+      
+      // 使用 XStream 读取流
       for await (const chunk of XStream({
         readableStream,
       })) {
@@ -449,20 +451,27 @@ const Independent = () => {
         try {
           const parsed = JSON.parse(chunk.data);
           
-          // 提取会话ID、消息ID和任务ID
-          if (parsed.conversation_id && !conversationId) {
-            console.log('设置会话ID:', parsed.conversation_id);
-            setConversationId(parsed.conversation_id);
-          }
-          
-          if (parsed.message_id && !messageId) {
-            console.log('设置消息ID:', parsed.message_id);
-            setMessageId(parsed.message_id);
-          }
-          
-          if (parsed.task_id && !taskId) {
-            console.log('设置任务ID:', parsed.task_id);
-            setTaskId(parsed.task_id);
+          // 只在IDs未设置时检查
+          if (!idsSet) {
+            if (parsed.conversation_id) {
+              console.log('设置会话ID:', parsed.conversation_id);
+              setConversationId(parsed.conversation_id);
+            }
+            
+            if (parsed.message_id) {
+              console.log('设置消息ID:', parsed.message_id);
+              setMessageId(parsed.message_id);
+            }
+            
+            if (parsed.task_id) {
+              console.log('设置任务ID:', parsed.task_id);
+              setTaskId(parsed.task_id);
+            }
+            
+            // 如果所有必要的ID都已收到，标记为已设置
+            if (parsed.conversation_id && parsed.message_id && parsed.task_id) {
+              idsSet = true;
+            }
           }
           
           // 处理回答内容
