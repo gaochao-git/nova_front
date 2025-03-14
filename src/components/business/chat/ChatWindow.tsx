@@ -257,6 +257,31 @@ function createDifyStream(message: string, inputs = {}, conversationId?: string,
   });
 }
 
+// 添加停止消息生成的函数
+const stopMessageGeneration = async (messageId) => {
+  try {
+    const response = await fetch(`${baseUrl}/v1/chat-messages/${messageId}/stop`, {
+      method: 'POST',
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user: 'system'  // 使用与其他请求一致的 user
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to stop message generation:', error);
+    throw error;
+  }
+};
+
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
@@ -277,6 +302,7 @@ const Independent = () => {
   // 添加会话ID和消息ID的状态
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [messageId, setMessageId] = useState<string | undefined>();
+  const [taskId, setTaskId] = useState<string | undefined>();
 
   // ==================== Runtime ====================
   useEffect(() => {
@@ -284,8 +310,22 @@ const Independent = () => {
       setMessages([]);
       setConversationId(undefined);
       setMessageId(undefined);
+      setTaskId(undefined);
     }
   }, [activeKey]);
+
+  // 添加停止生成的处理函数
+  const handleStopGeneration = async () => {
+    if (messageId) {
+      try {
+        await stopMessageGeneration(messageId);
+        setIsLoading(false);
+        antMessage.success('已停止生成');
+      } catch (error) {
+        antMessage.error('停止生成失败');
+      }
+    }
+  };
 
   // ==================== Event ====================
   const onRequest = (message) => {
@@ -375,6 +415,7 @@ const Independent = () => {
     
     setIsLoading(true);
     setLines([]);
+    setMessageId(undefined); // 重置消息ID
     
     // 添加用户消息并获取AI消息ID
     const aiMessageId = onRequest(nextQuestion);
@@ -402,7 +443,7 @@ const Independent = () => {
         try {
           const parsed = JSON.parse(chunk.data);
           
-          // 提取会话ID和消息ID
+          // 提取会话ID、消息ID和任务ID
           if (parsed.conversation_id && !conversationId) {
             setConversationId(parsed.conversation_id);
           }
@@ -411,7 +452,12 @@ const Independent = () => {
             setMessageId(parsed.message_id);
           }
           
-          if (parsed.answer) {
+          if (parsed.task_id && !taskId) {
+            setTaskId(parsed.task_id);
+          }
+          
+          // 处理回答内容
+          if (parsed.event === 'message' && parsed.answer !== undefined) {
             fullResponse += parsed.answer;
             updateAIMessage(aiMessageId, fullResponse);
           }
@@ -642,6 +688,7 @@ const Independent = () => {
           prefix={attachmentsNode}
           loading={isLoading}
           className={styles.sender}
+          onCancel={isLoading ? handleStopGeneration : undefined}
         />
       </div>
     </div>
