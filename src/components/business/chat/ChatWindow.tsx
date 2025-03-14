@@ -24,7 +24,6 @@ import {
 } from '@ant-design/icons';
 import { Badge, Button, Space, Typography } from 'antd';
 import markdownit from 'markdown-it';
-import Image from 'next/image';
 
 const renderTitle = (icon, title) => (
   <Space align="start">
@@ -245,7 +244,11 @@ const Independent = () => {
   // ==================== Runtime ====================
   const [agent] = useXAgent({
     request: async ({ message }, { onSuccess }) => {
-      onSuccess(`Mock success return. You said: ${message}`);
+      onSuccess(`### 收到消息 ✨
+
+你说的是：**${message}**
+
+> 这是一个 markdown 格式的回复示例`);
     },
   });
   const { onRequest, messages, setMessages } = useXChat({
