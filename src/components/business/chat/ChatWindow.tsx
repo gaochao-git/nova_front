@@ -311,7 +311,6 @@ const ChatWindow = () => {
             }}
           />
         )}
-        {/* <div ref={messagesEndRef} /> */}
       </div>
       <div className={`flex gap-2 p-2 rounded-lg border ${
         themeMode === 'dark' 
