@@ -31,6 +31,33 @@ interface IMessage {
 // 在 ChatWindow 组件外创建 markdown 实例
 const md = markdownit({ html: true, breaks: true });
 
+// 添加模拟回复的常量
+const MOCK_RESPONSE = `# 标题
+这是一段带有 **粗体** 和 *斜体* 的文本。
+
+- 列表项 1
+- 列表项 2
+
+> 这是一段引用
+
+\`\`\`javascript
+console.log('这是代码块');
+\`\`\``;
+
+const WELCOME_RESPONSE = `# 欢迎使用智能运维助手！
+
+我可以帮助您解决以下问题：
+
+- 系统运维相关问题
+- 技术支持和建议
+- 故障诊断和解决方案
+
+> 请告诉我您需要什么帮助？
+
+\`\`\`tip
+您可以尝试询问具体的运维问题
+\`\`\``;
+
 const ChatWindow = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -71,19 +98,7 @@ const ChatWindow = () => {
 
     const assistantMessage: IMessage = {
       id: (Date.now() + 1).toString(),
-      content: `
-# 标题
-这是一段带有 **粗体** 和 *斜体* 的文本。
-
-- 列表项 1
-- 列表项 2
-
-> 这是一段引用
-
-\`\`\`javascript
-console.log('这是代码块');
-\`\`\`
-`,
+      content: MOCK_RESPONSE,
       type: 'assistant',
       timestamp: new Date(),
     };
@@ -102,19 +117,7 @@ console.log('这是代码块');
             msg.id === assistantMessage.id
               ? {
                   ...msg,
-                  content: `# 欢迎使用智能运维助手！
-
-我可以帮助您解决以下问题：
-
-- 系统运维相关问题
-- 技术支持和建议
-- 故障诊断和解决方案
-
-> 请告诉我您需要什么帮助？
-
-\`\`\`tip
-您可以尝试询问具体的运维问题
-\`\`\``,
+                  content: WELCOME_RESPONSE,
                   timestamp: new Date(),
                 }
               : msg
