@@ -277,15 +277,6 @@ const Independent = () => {
   // Add Dify state
   const [lines, setLines] = React.useState<Record<string, string>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  const difyContent = lines.map((line) => {
-    try {
-      const parsed = JSON.parse(line.data);
-      return parsed.answer || '';
-    } catch (e) {
-      return '';
-    }
-  }).join('');
 
   // ==================== Runtime ====================
   useEffect(() => {
@@ -322,18 +313,18 @@ const Independent = () => {
     );
   };
 
-  const onSubmit = async (nextContent) => {
-    if (!nextContent) return;
+  const onSubmit = async (nextQuestion) => {
+    if (!nextQuestion) return;
     
     setIsLoading(true);
     setLines([]);
     
     // 添加用户消息并获取AI消息ID
-    const aiMessageId = onRequest(nextContent);
+    const aiMessageId = onRequest(nextQuestion);
     setContent('');
     
     try {
-      const readableStream = await createDifyStream(nextContent);
+      const readableStream = await createDifyStream(nextQuestion);
       
       if (!readableStream) {
         throw new Error('无法从Dify API获取数据流');
