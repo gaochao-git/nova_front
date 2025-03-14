@@ -36,7 +36,7 @@ import { Badge, Button, Space, message as antMessage, theme } from 'antd';
 // 导入渲染函数
 import { renderMarkdown } from '../markdown/MarkdownRenderer';
 
-const renderTitle = (icon, title) => (
+const renderTitle = (icon: React.ReactNode, title: string) => (
   <Space align="start">
     {icon}
     <span>{title}</span>
