@@ -415,14 +415,11 @@ const Independent = () => {
   const onSubmit = async (nextQuestion) => {
     if (!nextQuestion) return;
     
-    console.log('开始提交问题:', nextQuestion);
     setIsLoading(true);
     setLines([]);
     
     // 重置消息ID并记录日志
-    console.log('重置前的messageId:', messageId);
     setMessageId(undefined);
-    console.log('重置后的messageId:', undefined);
     
     // 添加用户消息并获取AI消息ID
     const aiMessageId = onRequest(nextQuestion);
@@ -431,19 +428,14 @@ const Independent = () => {
     try {
       // 传递附件文件ID列表，如果有的话
       const fileIds = attachedFiles.map(file => file.response?.id).filter(Boolean);
-      console.log('附件文件IDs:', fileIds);
+
       
-      // 传递当前会话ID，如果存在的话
-      console.log('当前会话ID:', conversationId);
-      
-      console.log('正在创建Dify流...');
       const readableStream = await createDifyStream(nextQuestion, {}, conversationId, fileIds);
       
       if (!readableStream) {
         throw new Error('无法从Dify API获取数据流');
       }
       
-      console.log('Dify流创建成功，开始读取数据');
       let fullResponse = '';
       let chunkCount = 0;
       
@@ -452,12 +444,10 @@ const Independent = () => {
         readableStream,
       })) {
         chunkCount++;
-        console.log(`收到数据块 #${chunkCount}:`, chunk);
         setLines((pre) => [...pre, chunk]);
         
         try {
           const parsed = JSON.parse(chunk.data);
-          console.log(`数据块 #${chunkCount} 解析结果:`, parsed);
           
           // 提取会话ID、消息ID和任务ID
           if (parsed.conversation_id && !conversationId) {
@@ -466,16 +456,8 @@ const Independent = () => {
           }
           
           if (parsed.message_id && !messageId) {
-            console.log('发现消息ID:', parsed.message_id);
-            console.log('设置前的messageId状态:', messageId);
+            console.log('设置消息ID:', parsed.message_id);
             setMessageId(parsed.message_id);
-            
-            // 由于setState是异步的，我们需要在下一个事件循环中检查
-            setTimeout(() => {
-              console.log('设置后的messageId状态:', messageId);
-            }, 0);
-            
-            console.log('消息ID已设置，现在可以停止生成');
           }
           
           if (parsed.task_id && !taskId) {
@@ -493,7 +475,6 @@ const Independent = () => {
         }
       }
       
-      console.log('流读取完成，共处理数据块:', chunkCount);
     } catch (error) {
       console.error('读取Dify流时出错:', error);
       setLines([{ data: JSON.stringify({ event: 'error', message: error.message }) }]);
