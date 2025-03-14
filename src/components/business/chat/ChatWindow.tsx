@@ -493,7 +493,7 @@ const Independent = () => {
     }
   };
   const onPromptsItemClick = (info) => {
-    onRequest(info.data.description);
+    onSubmit(info.data.description);
   };
   const onAddConversation = () => {
     setConversationsItems([
