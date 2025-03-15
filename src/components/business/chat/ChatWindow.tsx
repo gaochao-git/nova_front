@@ -535,11 +535,6 @@ const Independent = () => {
     }
   };
 
-  // 在渲染消息时，确保历史消息直接显示完整内容
-  const renderHistoryMessage = (message) => {
-    // 直接使用项目中已有的renderMarkdown函数
-    return renderMarkdown(message);
-  };
 
   // 修改会话点击处理函数，添加手动加载消息的功能
   const onConversationClick = (key) => {
