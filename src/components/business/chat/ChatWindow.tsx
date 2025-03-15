@@ -304,6 +304,38 @@ const getHistoryConversations = async () => {
   }
 };
 
+/**
+ * 提交消息反馈（点赞/点踩）
+ * @param {string} messageId - 消息ID
+ * @param {string} rating - 反馈类型 ('like' 或 'dislike')
+ * @returns {Promise<Object>} 反馈结果
+ */
+const submitMessageFeedback = async (messageId, rating) => {
+  try {
+    const response = await fetch(`${baseUrl}/v1/messages/${messageId}/feedbacks`, {
+      method: 'POST',
+      headers: {
+        'Authorization': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        rating: rating,
+        user: 'abc-123',
+        content: `User ${rating} the message`
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`反馈提交失败: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('提交反馈时出错:', error);
+    throw error;
+  }
+};
+
 const Independent = () => {
   // ==================== Style ====================
   const { styles } = useStyle();
@@ -563,26 +595,44 @@ const Independent = () => {
       });
   };
 
-  // 处理点赞
-  const handleLike = (messageId) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, liked: !msg.liked, disliked: false } 
-          : msg
-      )
-    );
-  };
-
-  // 处理点踩
-  const handleDislike = (messageId) => {
-    setMessages(prev => 
-      prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, disliked: !msg.disliked, liked: false } 
-          : msg
-      )
-    );
+  // 处理消息反馈（点赞/点踩）
+  const handleFeedback = async (messageId, feedbackType) => {
+    try {
+      // 只处理助手消息
+      const message = messages.find(msg => msg.id === messageId);
+      if (!message || message.type !== 'assistant') return;
+      
+      // 确定新的状态
+      const isLike = feedbackType === 'like';
+      const newLikedState = isLike ? !message.liked : false;
+      const newDislikedState = !isLike ? !message.disliked : false;
+      
+      // 更新UI状态
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === messageId 
+            ? { ...msg, liked: newLikedState, disliked: newDislikedState } 
+            : msg
+        )
+      );
+      
+      // 如果消息有真实ID（不是前端生成的），则提交反馈
+      if (typeof message.id === 'string' && !message.id.startsWith('user-')) {
+        // 确定API需要的rating参数
+        let rating;
+        if (isLike) {
+          rating = newLikedState ? 'like' : 'unlike';
+        } else {
+          rating = newDislikedState ? 'dislike' : 'undislike';
+        }
+        
+        const result = await submitMessageFeedback(message.id, rating);
+        console.log('反馈提交结果:', result);
+      }
+    } catch (error) {
+      console.error(`处理${feedbackType}反馈时出错:`, error);
+      antMessage.error('提交反馈失败');
+    }
   };
 
   // 处理重新生成回答
@@ -775,14 +825,14 @@ const Independent = () => {
                 type="text" 
                 size="small" 
                 icon={liked ? <LikeFilled /> : <LikeOutlined />}
-                onClick={() => handleLike(id)}
+                onClick={() => handleFeedback(id, 'like')}
                 style={liked ? { color: token.colorPrimary } : {}}
               />
               <Button 
                 type="text" 
                 size="small" 
                 icon={disliked ? <DislikeFilled /> : <DislikeOutlined />}
-                onClick={() => handleDislike(id)}
+                onClick={() => handleFeedback(id, 'dislike')}
                 style={disliked ? { color: token.colorError } : {}}
               />
               <Button 
