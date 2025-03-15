@@ -120,7 +120,9 @@ const RootLayout: React.FC<IRootLayoutProps> = ({ children }) => {
             <AppstoreOutlined style={{ fontSize: '1.125rem', color: token.colorPrimary }} />
             <span className={`text-base font-bold transition-all duration-200 ${
               collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'
-            }`}>
+            }`}
+              style={{ color: token.colorText }}
+            >
               {messages[locale].header.title}
             </span>
           </div>
