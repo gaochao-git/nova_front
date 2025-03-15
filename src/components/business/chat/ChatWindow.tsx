@@ -35,6 +35,8 @@ import {
 import { Badge, Button, Space, message as antMessage, theme } from 'antd';
 // 导入渲染函数
 import { renderMarkdown } from '../markdown/MarkdownRenderer';
+// 导入 Next.js 的 Image 组件
+import Image from 'next/image';
 
 const renderTitle = (icon: React.ReactNode, title: string) => (
   <Space align="start">
@@ -132,6 +134,7 @@ const placeholderPromptsItems = [
       <FireOutlined
         style={{
           color: '#FF4D4F',
+          fontSize: 16,
         }}
       />,
       'Hot Topics',
@@ -216,6 +219,7 @@ const roles = {
     styles: {
       content: {
         borderRadius: 16,
+        background: 'rgba(22, 119, 255, 0.1)',
       },
     },
   },
@@ -755,7 +759,7 @@ const Independent = () => {
     <Space direction="vertical" size={16} className={styles.placeholder}>
       <Welcome
         variant="borderless"
-        icon={<img src="/images/image.png" alt="welcome" style={{ width: 24, height: 24 }} />}
+        icon={<img src="/images/assistant.png" alt="welcome" style={{ width: 24, height: 24 }} />}
         title="Hello, I'm Ant Design X"
         description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
         extra={
@@ -780,6 +784,16 @@ const Independent = () => {
       />
     </Space>
   );
+
+  // 为图标设置一致的尺寸样式
+  const iconStyle = {
+    fontSize: 16, // 设置统一的图标大小
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
+
+  // 在渲染消息项时应用统一的图标样式
   const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked, isHistory }) => {
     // 只有非历史的助手消息才使用打字机效果
     const typingEffect = (!isHistory && type === 'assistant') ? { step: 1, interval: 50 } : false;
@@ -792,16 +806,38 @@ const Independent = () => {
       typing: typingEffect,
       messageRender: renderMarkdown,
       avatar: type === 'assistant' ? (
-        <div style={{ background: token.colorPrimary, borderRadius: '50%', padding: 4 }}>
-          <RobotOutlined style={{ color: '#fff' }} />
+        <div style={{ 
+          background: token.colorBgLayout, 
+          borderRadius: '50%', 
+          padding: 4,
+          width: 28, // 固定宽度
+          height: 28, // 固定高度
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Image 
+            src="/images/assistant.png" 
+            alt="AI" 
+            width={16} 
+            height={16} 
+          />
         </div>
       ) : (
         <div style={{ 
           background: themeMode === 'dark' ? token.colorBgElevated : token.colorBgLayout, 
           borderRadius: '50%', 
-          padding: 4 
+          padding: 4,
+          width: 28, // 固定宽度
+          height: 28, // 固定高度
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
-          <UserOutlined style={{ color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary }} />
+          <UserOutlined style={{ 
+            color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary,
+            fontSize: 16 // 固定图标大小
+          }} />
         </div>
       ),
       // 添加鼠标事件处理
