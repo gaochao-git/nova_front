@@ -725,9 +725,7 @@ const Independent = () => {
   );
   const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked, isHistory }) => {
     // 只有非历史的助手消息才使用打字机效果
-    const typingEffect = (!isHistory && type === 'assistant') 
-      ? { step: 5, interval: 20 } 
-      : false;
+    const typingEffect = (!isHistory && type === 'assistant') ? { step: 1, interval: 50 } : false;
     
     return {
       key: id,
