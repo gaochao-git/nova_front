@@ -497,6 +497,10 @@ const Independent = () => {
         
         // 添加助手消息（如果有回答）
         if (msg.answer) {
+          // 检查是否有反馈信息
+          const hasLike = msg.feedback && msg.feedback.rating === 'like';
+          const hasDislike = msg.feedback && msg.feedback.rating === 'dislike';
+          
           formattedMessages.push({
             id: msg.id,
             message: msg.answer,
@@ -504,8 +508,8 @@ const Independent = () => {
             timestamp: new Date(msg.created_at * 1000),
             loading: false,
             isHistory: true,
-            liked: false,
-            disliked: false
+            liked: hasLike,
+            disliked: hasDislike
           });
         }
       });
