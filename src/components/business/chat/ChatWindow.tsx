@@ -11,7 +11,7 @@ import {
   XStream,
 } from '@ant-design/x';
 import { createStyles } from 'antd-style';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   CloudUploadOutlined,
   CommentOutlined,
@@ -257,7 +257,52 @@ function createDifyStream(message: string, inputs = {}, conversationId?: string,
   });
 }
 
+/**
+ * 获取会话消息列表
+ * @param {string} conversationId - 会话ID
+ * @returns {Promise<Array>} 会话消息列表
+ */
+const getConversationMessages = async (conversationId) => {
+  try {
+    const response = await fetch(
+      `${baseUrl}/v1/messages?user=abc-123&conversation_id=${conversationId}`,
+      {
+        headers: {
+          'Authorization': apiKey
+        }
+      }
+    );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取会话消息失败:', error);
+    throw error;
+  }
+};
+
+// 获取历史会话列表
+const getHistoryConversations = async () => {
+  try {
+    const response = await fetch(`${baseUrl}/v1/conversations?user=abc-123`, {
+      headers: {
+        'Authorization': apiKey
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('获取历史会话列表失败:', error);
+    throw error;
+  }
+};
 
 const Independent = () => {
   // ==================== Style ====================
@@ -269,7 +314,7 @@ const Independent = () => {
   const [headerOpen, setHeaderOpen] = React.useState(false);
   const [content, setContent] = React.useState('');
   const [conversationsItems, setConversationsItems] = React.useState(defaultConversationsItems);
-  const [activeKey, setActiveKey] = React.useState(defaultConversationsItems[0].key);
+  const [activeKey, setActiveKey] = React.useState<string | undefined>(undefined);
   const [attachedFiles, setAttachedFiles] = React.useState([]);
   const [messages, setMessages] = React.useState([]);
 
@@ -281,6 +326,9 @@ const Independent = () => {
   const [messageId, setMessageId] = useState<string | undefined>();
   const [taskId, setTaskId] = useState<string | undefined>();
 
+  // 使用 useRef 跟踪是否已经加载过历史会话
+  const historyLoaded = React.useRef(false);
+
   // ==================== Runtime ====================
   useEffect(() => {
     if (activeKey !== undefined) {
@@ -290,6 +338,18 @@ const Independent = () => {
       setTaskId(undefined);
     }
   }, [activeKey]);
+
+  // 组件挂载时只加载一次历史会话
+  useEffect(() => {
+    // 检查是否已经加载过
+    if (!historyLoaded.current) {
+      console.log('组件挂载，加载历史会话');
+      loadHistoryConversations();
+      historyLoaded.current = true;
+    } else {
+      console.log('已经加载过历史会话，跳过');
+    }
+  }, []);
 
   // 添加停止消息生成的函数
   const stopMessageGeneration = async () => {
@@ -340,6 +400,120 @@ const Independent = () => {
     }
   };
 
+  // 加载历史会话列表
+  const loadHistoryConversations = async () => {
+    try {
+      const result = await getHistoryConversations();
+      console.log('获取到的历史会话:', result);
+      const conversationItems = result.data.map((conv, index) => ({
+        key: conv.id, // 使用id作为key
+        label: conv.name || `对话 ${index + 1}`,
+        time: new Date(conv.created_at * 1000).toLocaleString(),
+      }));
+      
+      console.log('格式化后的会话项:', conversationItems);
+      setConversationsItems(conversationItems);
+    } catch (error) {
+      console.error('加载历史会话失败:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 修改加载会话消息的函数，正确处理用户和助手消息
+  const loadConversationMessages = async (conversationId) => {
+    try {
+      setIsLoading(true);
+      console.log(`正在加载会话消息，会话ID: ${conversationId}`);
+      
+      // 构建完整的绝对URL
+      const url = `${baseUrl}/v1/messages?user=abc-123&conversation_id=${conversationId}`;
+      console.log(`请求URL: ${url}`);
+      
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': apiKey
+        }
+      });
+
+      if (!response.ok) {
+        console.error(`请求失败，状态码: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(`成功加载消息数据:`, result);
+      
+      // 处理API返回的数据，创建用户和助手消息对
+      const formattedMessages = [];
+      
+      // 遍历API返回的消息
+      result.data.forEach(msg => {
+        // 添加用户消息
+        if (msg.query) {
+          formattedMessages.push({
+            id: `user-${msg.id}`,
+            message: msg.query,
+            type: 'user',
+            timestamp: new Date(msg.created_at * 1000),
+            loading: false,
+            isHistory: true,
+            liked: false,
+            disliked: false
+          });
+        }
+        
+        // 添加助手消息（如果有回答）
+        if (msg.answer) {
+          formattedMessages.push({
+            id: msg.id,
+            message: msg.answer,
+            type: 'assistant',
+            timestamp: new Date(msg.created_at * 1000),
+            loading: false,
+            isHistory: true,
+            liked: false,
+            disliked: false
+          });
+        }
+      });
+      
+      // 按时间戳排序
+      formattedMessages.sort((a, b) => a.timestamp - b.timestamp);
+      
+      setMessages(formattedMessages);
+      setConversationId(conversationId);
+    } catch (error) {
+      console.error('加载消息时出错:', error);
+      antMessage.error('加载消息失败');
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 在渲染消息时，确保历史消息直接显示完整内容
+  const renderHistoryMessage = (message) => {
+    // 直接使用项目中已有的renderMarkdown函数
+    return renderMarkdown(message);
+  };
+
+  // 修改会话点击处理函数，添加手动加载消息的功能
+  const onConversationClick = (key) => {
+    console.log('点击会话:', key);
+    if (key !== activeKey) {
+      setActiveKey(key);
+    }
+    
+    // 手动加载消息
+    if (key && key !== '0') {
+      loadConversationMessages(key);
+    } else {
+      // 如果是新会话或默认会话，清空消息列表
+      setMessages([]);
+      setConversationId(undefined);
+    }
+  };
 
   // ==================== Event ====================
   const onRequest = (message) => {
@@ -517,9 +691,6 @@ const Independent = () => {
     ]);
     setActiveKey(`${conversationsItems.length}`);
   };
-  const onConversationClick = (key) => {
-    setActiveKey(key);
-  };
   const handleFileChange = (info) => setAttachedFiles(info.fileList);
 
   // ==================== Nodes ====================
@@ -552,78 +723,86 @@ const Independent = () => {
       />
     </Space>
   );
-  const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked }) => ({
-    key: id,
-    loading,  // 直接使用布尔值，不需要判断
-    role: type === 'user' ? 'local' : 'ai',
-    content: message,
-    messageRender: renderMarkdown,
-    avatar: type === 'assistant' ? (
-      <div style={{ background: token.colorPrimary, borderRadius: '50%', padding: 4 }}>
-        <RobotOutlined style={{ color: '#fff' }} />
-      </div>
-    ) : (
-      <div style={{ 
-        background: themeMode === 'dark' ? token.colorBgElevated : token.colorBgLayout, 
-        borderRadius: '50%', 
-        padding: 4 
-      }}>
-        <UserOutlined style={{ color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary }} />
-      </div>
-    ),
-    footer: (
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <div style={{ 
-          fontSize: token.fontSizeSM, 
-          color: token.colorTextQuaternary 
-        }}>
-          {timestamp.toLocaleString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          })}
+  const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked, isHistory }) => {
+    // 只有非历史的助手消息才使用打字机效果
+    const typingEffect = (!isHistory && type === 'assistant') 
+      ? { step: 5, interval: 20 } 
+      : false;
+    
+    return {
+      key: id,
+      loading: loading,
+      role: type === 'user' ? 'local' : 'ai',
+      content: message,
+      typing: typingEffect,
+      messageRender: renderMarkdown,
+      avatar: type === 'assistant' ? (
+        <div style={{ background: token.colorPrimary, borderRadius: '50%', padding: 4 }}>
+          <RobotOutlined style={{ color: '#fff' }} />
         </div>
-        {type === 'assistant' && (
-          <Space size={token.paddingXXS}>
-            <Button 
-              type="text" 
-              size="small" 
-              icon={<CopyOutlined />} 
-              onClick={() => handleCopy(message)}
-            />
-            <Button 
-              type="text" 
-              size="small" 
-              icon={liked ? <LikeFilled /> : <LikeOutlined />}
-              onClick={() => handleLike(id)}
-              style={liked ? { color: token.colorPrimary } : {}}
-            />
-            <Button 
-              type="text" 
-              size="small" 
-              icon={disliked ? <DislikeFilled /> : <DislikeOutlined />}
-              onClick={() => handleDislike(id)}
-              style={disliked ? { color: token.colorError } : {}}
-            />
-            <Button 
-              type="text" 
-              size="small" 
-              icon={<ReloadOutlined />}
-              onClick={() => handleRefresh(id)}
-              style={{ 
-                color: token.colorTextQuaternary,
-                transition: 'color 0.3s'
-              }}
-            />
-          </Space>
-        )}
-      </div>
-    )
-  }));
+      ) : (
+        <div style={{ 
+          background: themeMode === 'dark' ? token.colorBgElevated : token.colorBgLayout, 
+          borderRadius: '50%', 
+          padding: 4 
+        }}>
+          <UserOutlined style={{ color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary }} />
+        </div>
+      ),
+      footer: (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+          <div style={{ 
+            fontSize: token.fontSizeSM, 
+            color: token.colorTextQuaternary 
+          }}>
+            {timestamp.toLocaleString('zh-CN', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            })}
+          </div>
+          {type === 'assistant' && (
+            <Space size={token.paddingXXS}>
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<CopyOutlined />} 
+                onClick={() => handleCopy(message)}
+              />
+              <Button 
+                type="text" 
+                size="small" 
+                icon={liked ? <LikeFilled /> : <LikeOutlined />}
+                onClick={() => handleLike(id)}
+                style={liked ? { color: token.colorPrimary } : {}}
+              />
+              <Button 
+                type="text" 
+                size="small" 
+                icon={disliked ? <DislikeFilled /> : <DislikeOutlined />}
+                onClick={() => handleDislike(id)}
+                style={disliked ? { color: token.colorError } : {}}
+              />
+              <Button 
+                type="text" 
+                size="small" 
+                icon={<ReloadOutlined />}
+                onClick={() => handleRefresh(id)}
+                style={{ 
+                  color: token.colorTextQuaternary,
+                  transition: 'color 0.3s'
+                }}
+              />
+            </Space>
+          )}
+        </div>
+      )
+    };
+  });
   const attachmentsNode = (
     <Badge dot={attachedFiles.length > 0 && !headerOpen}>
       <Button type="text" icon={<PaperClipOutlined />} onClick={() => setHeaderOpen(!headerOpen)} />
@@ -668,6 +847,12 @@ const Independent = () => {
       <span>Ant Design X</span>
     </div>
   );
+
+  console.log('渲染Conversations组件:', {
+    items: conversationsItems,
+    activeKey,
+    onActiveChange: onConversationClick
+  });
 
   // ==================== Render =================
   return (
