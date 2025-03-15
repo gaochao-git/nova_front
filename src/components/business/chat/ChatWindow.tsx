@@ -212,10 +212,7 @@ const senderPromptsItems = [
 const roles = {
   ai: {
     placement: 'start',
-    typing: {
-      step: 5,
-      interval: 20,
-    },
+    typing: false,
     styles: {
       content: {
         borderRadius: 16,
@@ -727,6 +724,18 @@ const Independent = () => {
         }
       }
       
+      // 在流式响应完成后，更新消息的最终状态
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === aiMessageId ? { 
+            ...msg, 
+            message: fullResponse,
+            loading: false,
+            timestamp: new Date()
+          } : msg
+        )
+      );
+      
     } catch (error) {
       setLines([{ data: JSON.stringify({ event: 'error', message: error.message }) }]);
       updateAIMessage(aiMessageId, `Error: ${error.message}`);
@@ -790,15 +799,12 @@ const Independent = () => {
 
   // 在渲染消息项时应用统一的图标样式
   const items = messages.map(({ id, message, loading, type, timestamp, liked, disliked, isHistory }) => {
-    // 只有非历史的助手消息才使用打字机效果
-    const typingEffect = (!isHistory && type === 'assistant') ? { step: 1, interval: 50 } : false;
-    
     return {
       key: id,
       loading: loading,
       role: type === 'user' ? 'local' : 'ai',
       content: message,
-      typing: typingEffect,
+      typing: false,
       messageRender: renderMarkdown,
       avatar: type === 'assistant' ? (
         <div style={{ 
