@@ -55,7 +55,8 @@ const useStyle = createStyles(({ token, css }) => {
     layout: css`
       width: 100%;
       min-width: 1000px;
-      height: 722px;
+      height: calc(100vh - 64px);
+      min-height: 600px;
       border-radius: ${token.borderRadius}px;
       display: flex;
       background: ${token.colorBgContainer};
@@ -90,6 +91,7 @@ const useStyle = createStyles(({ token, css }) => {
     `,
     messages: css`
       flex: 1;
+      overflow-y: auto;
     `,
     placeholder: css`
       padding-top: 32px;
