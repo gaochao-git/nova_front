@@ -361,6 +361,9 @@ const Independent = () => {
   // 使用 useRef 跟踪是否已经加载过历史会话
   const historyLoaded = React.useRef(false);
 
+  // 添加状态来跟踪当前悬浮的消息ID
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+
   // ==================== Runtime ====================
   useEffect(() => {
     if (activeKey !== undefined) {
@@ -801,8 +804,19 @@ const Independent = () => {
           <UserOutlined style={{ color: themeMode === 'dark' ? '#fff' : token.colorTextSecondary }} />
         </div>
       ),
+      // 添加鼠标事件处理
+      onMouseEnter: () => setHoveredMessageId(id),
+      onMouseLeave: () => setHoveredMessageId(null),
       footer: (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginTop: 8,
+          // 只有当消息被悬浮或者已经有反馈时才显示操作按钮
+          opacity: hoveredMessageId === id || liked || disliked ? 1 : 0,
+          transition: 'opacity 0.3s'
+        }}>
           <div style={{ 
             fontSize: token.fontSizeSM, 
             color: token.colorTextQuaternary 
