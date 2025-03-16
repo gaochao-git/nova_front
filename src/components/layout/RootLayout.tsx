@@ -6,7 +6,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   RobotOutlined,
-  DashboardOutlined,
+  ScheduleOutlined,
   ToolOutlined,
   AlertOutlined,
   SettingOutlined,
@@ -53,9 +53,9 @@ const RootLayout: React.FC<IRootLayoutProps> = ({ children }) => {
       label: t.menu.assistant,
     },
     {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: t.menu.dashboard,
+      key: '/task',
+      icon: <ScheduleOutlined />,
+      label: t.menu.task,
     },
     {
       key: '/tools',
