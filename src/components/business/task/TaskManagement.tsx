@@ -466,6 +466,8 @@ const TaskManagement: React.FC = () => {
     {
       title: '操作',
       key: 'action',
+      fixed: 'right',
+      width: 250,
       render: (_: any, record: Task) => (
         <Space size="small">
           <Button 
@@ -568,7 +570,8 @@ const TaskManagement: React.FC = () => {
           columns={columns} 
           dataSource={tasks} 
           rowKey="id"
-          pagination={false}
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: 1200 }}
         />
       </Card>
 
@@ -720,6 +723,7 @@ const TaskManagement: React.FC = () => {
           dataSource={currentTaskHistory}
           rowKey="id"
           pagination={{ pageSize: 5 }}
+          scroll={{ x: 600 }}
         />
       </Modal>
     </div>
