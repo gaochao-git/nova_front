@@ -27,7 +27,10 @@ import {
   ApiOutlined,
   KeyOutlined,
   QuestionCircleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  HistoryOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import { useTheme } from '@/lib/theme/theme.context';
 import cronstrue from 'cronstrue';
@@ -50,6 +53,16 @@ interface Task {
   active: boolean;
   lastRun?: string;
   nextRun?: string;
+  result?: string;
+}
+
+// 定义任务历史记录类型
+interface TaskHistory {
+  id: string;
+  taskId: string;
+  startTime: string;
+  endTime: string;
+  status: 'success' | 'failed' | 'running';
   result?: string;
 }
 
@@ -166,6 +179,46 @@ const initialTasks: Task[] = [
   },
 ];
 
+// 模拟任务历史数据
+const initialTaskHistory: TaskHistory[] = [
+  {
+    id: '101',
+    taskId: '3', // 磁盘SMART巡检任务
+    startTime: '2023-06-01 00:05:00',
+    endTime: '2023-06-01 00:05:42',
+    status: 'success',
+    result: initialTasks.find(t => t.id === '3')?.result,
+  },
+  {
+    id: '102',
+    taskId: '3',
+    startTime: '2023-05-31 00:05:00',
+    endTime: '2023-05-31 00:05:38',
+    status: 'success',
+  },
+  {
+    id: '103',
+    taskId: '3',
+    startTime: '2023-05-30 00:05:00',
+    endTime: '2023-05-30 00:05:45',
+    status: 'success',
+  },
+  {
+    id: '104',
+    taskId: '1', // 每日数据分析任务
+    startTime: '2023-06-01 08:00:00',
+    endTime: '2023-06-01 08:01:12',
+    status: 'success',
+  },
+  {
+    id: '105',
+    taskId: '1',
+    startTime: '2023-05-31 08:00:00',
+    endTime: '2023-05-31 08:01:05',
+    status: 'failed',
+  },
+];
+
 const TaskManagement: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -175,6 +228,10 @@ const TaskManagement: React.FC = () => {
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [currentResult, setCurrentResult] = useState<string>('');
   const [currentTaskName, setCurrentTaskName] = useState<string>('');
+  const [taskHistory, setTaskHistory] = useState<TaskHistory[]>(initialTaskHistory);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState<string>('');
+  const [currentTaskHistory, setCurrentTaskHistory] = useState<TaskHistory[]>([]);
 
   // 打开创建任务模态框
   const showCreateModal = () => {
@@ -240,15 +297,52 @@ const TaskManagement: React.FC = () => {
     setResultModalVisible(true);
   };
 
+  // 查看任务历史
+  const viewTaskHistory = (taskId: string) => {
+    setCurrentTaskId(taskId);
+    const history = taskHistory.filter(h => h.taskId === taskId);
+    setCurrentTaskHistory(history);
+    setHistoryModalVisible(true);
+  };
+
+  // 查看历史记录的结果
+  const viewHistoryResult = (history: TaskHistory) => {
+    setCurrentTaskName(`历史记录 - ${history.startTime}`);
+    setCurrentResult(history.result || '暂无结果');
+    setResultModalVisible(true);
+  };
+
   // 手动运行任务
   const runTask = (task: Task) => {
     message.loading(`正在运行任务: ${task.name}`);
     
+    // 创建一个新的运行中的历史记录
+    const now = new Date();
+    const startTime = now.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    const newHistoryId = `history-${Date.now()}`;
+    const newHistory: TaskHistory = {
+      id: newHistoryId,
+      taskId: task.id,
+      startTime: startTime,
+      endTime: '',
+      status: 'running',
+    };
+    
+    // 添加到历史记录
+    setTaskHistory([newHistory, ...taskHistory]);
+    
     // 模拟API调用
     setTimeout(() => {
-      message.success(`任务 ${task.name} 已成功运行`);
-      
-      // 生成模拟结果（仅用于演示）
+      // 生成模拟结果
       let simulatedResult = '';
       if (task.name === '磁盘SMART巡检') {
         simulatedResult = initialTasks.find(t => t.id === '3')?.result || '';
@@ -256,26 +350,62 @@ const TaskManagement: React.FC = () => {
         simulatedResult = `# ${task.name} 执行结果\n\n任务已成功执行，生成的分析报告如下：\n\n## 主要发现\n- 发现点1\n- 发现点2\n- 发现点3\n\n## 详细分析\n这里是详细的分析内容...`;
       }
       
-      // 更新最后运行时间和结果
+      // 更新任务的最后运行时间和结果
       setTasks(
         tasks.map(t => 
           t.id === task.id 
             ? { 
                 ...t, 
-                lastRun: new Date().toLocaleString('zh-CN', {
-                  year: 'numeric',
-                  month: '2-digit',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                  hour12: false
-                }),
+                lastRun: startTime,
                 result: simulatedResult
               } 
             : t
         )
       );
+      
+      // 更新历史记录状态为完成
+      const endTime = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      
+      setTaskHistory(
+        taskHistory.map(h => 
+          h.id === newHistoryId 
+            ? { 
+                ...h, 
+                endTime: endTime,
+                status: 'success',
+                result: simulatedResult
+              } 
+            : h
+        )
+      );
+      
+      message.success(`任务 ${task.name} 已成功运行`);
+      
+      // 如果当前正在查看该任务的历史，更新显示
+      if (currentTaskId === task.id) {
+        setCurrentTaskHistory(
+          taskHistory
+            .filter(h => h.taskId === task.id)
+            .map(h => 
+              h.id === newHistoryId 
+                ? { 
+                    ...h, 
+                    endTime: endTime,
+                    status: 'success',
+                    result: simulatedResult
+                  } 
+                : h
+            )
+        );
+      }
     }, 2000);
   };
 
@@ -360,6 +490,11 @@ const TaskManagement: React.FC = () => {
             onClick={() => viewTaskResult(record)}
             disabled={!record.result}
           />
+          <Button
+            type="text"
+            icon={<HistoryOutlined />}
+            onClick={() => viewTaskHistory(record.id)}
+          />
           <Popconfirm
             title="确定要删除此任务吗?"
             onConfirm={() => handleDelete(record.id)}
@@ -369,6 +504,48 @@ const TaskManagement: React.FC = () => {
             <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
+      ),
+    },
+  ];
+
+  // 历史记录表格列定义
+  const historyColumns = [
+    {
+      title: '开始时间',
+      dataIndex: 'startTime',
+      key: 'startTime',
+    },
+    {
+      title: '结束时间',
+      dataIndex: 'endTime',
+      key: 'endTime',
+      render: (text: string) => text || '-',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => {
+        if (status === 'success') {
+          return <Tag icon={<CheckCircleOutlined />} color="success">成功</Tag>;
+        } else if (status === 'failed') {
+          return <Tag icon={<CloseCircleOutlined />} color="error">失败</Tag>;
+        } else {
+          return <Tag icon={<ClockCircleOutlined />} color="processing">运行中</Tag>;
+        }
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      render: (_: any, record: TaskHistory) => (
+        <Button
+          type="link"
+          onClick={() => viewHistoryResult(record)}
+          disabled={!record.result}
+        >
+          查看结果
+        </Button>
       ),
     },
   ];
@@ -427,7 +604,26 @@ const TaskManagement: React.FC = () => {
             label={
               <Space>
                 <span>Cron 表达式</span>
-                <Tooltip title="Cron表达式格式: 分 时 日 月 周, 例如: 0 8 * * * 表示每天早上8点">
+                <Tooltip title={
+                  <div>
+                    <p>Cron表达式格式: 分 时 日 月 周</p>
+                    <p>常用示例:</p>
+                    <ul style={{ paddingLeft: '20px', marginBottom: '5px' }}>
+                      <li><code>0 8 * * *</code> - 每天早上8点</li>
+                      <li><code>0 0 * * *</code> - 每天午夜0点</li>
+                      <li><code>*/10 * * * *</code> - 每10分钟执行一次</li>
+                      <li><code>0 */2 * * *</code> - 每2小时执行一次</li>
+                      <li><code>0 9-18 * * 1-5</code> - 工作日上午9点到下午6点，每小时执行一次</li>
+                      <li><code>0 0 * * 0</code> - 每周日午夜执行</li>
+                      <li><code>0 12 1 * *</code> - 每月1日中午12点执行</li>
+                      <li><code>30 4 1,15 * *</code> - 每月1日和15日的4:30执行</li>
+                      <li><code>0 0 1 1 *</code> - 每年1月1日午夜执行</li>
+                      <li><code>0 0,12 * * *</code> - 每天午夜和中午12点执行</li>
+                      <li><code>0 15 10 * * 1-5</code> - 工作日上午10:15执行</li>
+                      <li><code>0 0 1-7 * 1</code> - 每月第一个星期一执行</li>
+                    </ul>
+                  </div>
+                }>
                   <QuestionCircleOutlined />
                 </Tooltip>
               </Space>
@@ -505,6 +701,26 @@ const TaskManagement: React.FC = () => {
         <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
           <MarkdownRenderer content={currentResult} />
         </div>
+      </Modal>
+      
+      {/* 历史记录模态框 */}
+      <Modal
+        title={`任务历史记录 - ${tasks.find(t => t.id === currentTaskId)?.name || ''}`}
+        open={historyModalVisible}
+        onCancel={() => setHistoryModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setHistoryModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+        width={800}
+      >
+        <Table
+          columns={historyColumns}
+          dataSource={currentTaskHistory}
+          rowKey="id"
+          pagination={{ pageSize: 5 }}
+        />
       </Modal>
     </div>
   );
