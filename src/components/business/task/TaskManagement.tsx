@@ -26,10 +26,12 @@ import {
   ClockCircleOutlined,
   ApiOutlined,
   KeyOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { useTheme } from '@/lib/theme/theme.context';
 import cronstrue from 'cronstrue';
+import MarkdownRenderer from '@/components/business/markdown/MarkdownRenderer';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -48,6 +50,7 @@ interface Task {
   active: boolean;
   lastRun?: string;
   nextRun?: string;
+  result?: string;
 }
 
 // 模拟任务数据
@@ -78,6 +81,89 @@ const initialTasks: Task[] = [
     lastRun: '2023-05-26 17:00:00',
     nextRun: '2023-06-02 17:00:00',
   },
+  {
+    id: '3',
+    name: '磁盘SMART巡检',
+    description: '每天凌晨00:05检查所有磁盘的SMART健康状态',
+    cronExpression: '5 0 * * *',
+    difyApiUrl: 'http://127.0.0.1',
+    difyApiKey: 'Bearer app-s1LO3fgBHF0vJc0l9wbmutn8',
+    systemPrompt: '你是一个系统运维专家，专注于硬件健康监控和故障预测',
+    query: `请分析以下磁盘SMART数据，识别潜在问题并提供建议：
+    
+磁盘1: /dev/sda
+型号: Samsung SSD 860 EVO 500GB
+健康状态: PASSED
+温度: 38°C
+通电时间: 8760小时
+重分配扇区数: 0
+等待重分配扇区数: 0
+无法修正的扇区数: 0
+
+磁盘2: /dev/sdb
+型号: WD Blue 2TB
+健康状态: PASSED
+温度: 42°C
+通电时间: 15340小时
+重分配扇区数: 2
+等待重分配扇区数: 0
+无法修正的扇区数: 0
+
+磁盘3: /dev/sdc
+型号: Seagate Barracuda 4TB
+健康状态: WARNING
+温度: 45°C
+通电时间: 26280小时
+重分配扇区数: 12
+等待重分配扇区数: 4
+无法修正的扇区数: 0
+
+请提供每个磁盘的健康评估，并对有潜在问题的磁盘给出具体建议。`,
+    active: true,
+    lastRun: '2023-06-01 00:05:00',
+    nextRun: '2023-06-02 00:05:00',
+    result: `# 磁盘SMART健康状态分析报告
+
+## 磁盘1: /dev/sda (Samsung SSD 860 EVO 500GB)
+**健康状态: 良好**
+- 温度正常 (38°C)，在SSD的理想工作温度范围内
+- 无重分配扇区，表明闪存单元健康
+- 无等待重分配或无法修正的扇区
+- 通电时间约1年，对SSD来说属于正常使用寿命范围
+
+**建议**: 继续正常使用，无需采取任何措施。
+
+## 磁盘2: /dev/sdb (WD Blue 2TB)
+**健康状态: 良好，需要监控**
+- 温度正常 (42°C)，在机械硬盘的安全工作范围内
+- 有2个重分配扇区，数量较少，暂不构成严重问题
+- 无等待重分配或无法修正的扇区
+- 通电时间约1.75年，属于正常使用寿命范围
+
+**建议**: 
+- 继续使用，但建议定期备份重要数据
+- 密切监控重分配扇区数量的变化趋势，如果短期内快速增加，应考虑更换硬盘
+
+## 磁盘3: /dev/sdc (Seagate Barracuda 4TB)
+**健康状态: 警告，需要注意**
+- 温度偏高 (45°C)，虽然仍在安全范围内，但接近上限
+- 12个重分配扇区，数量明显增加，表明磁盘表面可能存在物理损伤
+- 4个等待重分配扇区，表明有更多扇区可能即将失效
+- 通电时间约3年，使用时间较长
+
+**建议**:
+- 立即备份此磁盘上的所有重要数据
+- 考虑改善系统散热，降低磁盘工作温度
+- 运行完整的磁盘表面扫描，标记并隔离坏扇区
+- 密切监控状态变化，如果重分配扇区或等待重分配扇区数量继续增加，建议尽快更换硬盘
+- 考虑在未来3-6个月内计划更换此硬盘
+
+## 总体建议
+1. 建立定期备份策略，确保重要数据至少有一份额外备份
+2. 每月检查一次所有磁盘的SMART状态，特别关注/dev/sdc
+3. 检查服务器散热系统，确保通风良好
+4. 为/dev/sdc磁盘上的数据制定迁移计划`,
+  },
 ];
 
 const TaskManagement: React.FC = () => {
@@ -86,6 +172,9 @@ const TaskManagement: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [form] = Form.useForm();
   const { themeMode } = useTheme();
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+  const [currentResult, setCurrentResult] = useState<string>('');
+  const [currentTaskName, setCurrentTaskName] = useState<string>('');
 
   // 打开创建任务模态框
   const showCreateModal = () => {
@@ -144,6 +233,13 @@ const TaskManagement: React.FC = () => {
     message.success(`任务已${active ? '启用' : '禁用'}`);
   };
 
+  // 查看任务结果
+  const viewTaskResult = (task: Task) => {
+    setCurrentTaskName(task.name);
+    setCurrentResult(task.result || '暂无结果');
+    setResultModalVisible(true);
+  };
+
   // 手动运行任务
   const runTask = (task: Task) => {
     message.loading(`正在运行任务: ${task.name}`);
@@ -152,7 +248,15 @@ const TaskManagement: React.FC = () => {
     setTimeout(() => {
       message.success(`任务 ${task.name} 已成功运行`);
       
-      // 更新最后运行时间
+      // 生成模拟结果（仅用于演示）
+      let simulatedResult = '';
+      if (task.name === '磁盘SMART巡检') {
+        simulatedResult = initialTasks.find(t => t.id === '3')?.result || '';
+      } else {
+        simulatedResult = `# ${task.name} 执行结果\n\n任务已成功执行，生成的分析报告如下：\n\n## 主要发现\n- 发现点1\n- 发现点2\n- 发现点3\n\n## 详细分析\n这里是详细的分析内容...`;
+      }
+      
+      // 更新最后运行时间和结果
       setTasks(
         tasks.map(t => 
           t.id === task.id 
@@ -166,7 +270,8 @@ const TaskManagement: React.FC = () => {
                   minute: '2-digit',
                   second: '2-digit',
                   hour12: false
-                })
+                }),
+                result: simulatedResult
               } 
             : t
         )
@@ -248,6 +353,12 @@ const TaskManagement: React.FC = () => {
             icon={<PlayCircleOutlined />} 
             disabled={!record.active}
             onClick={() => runTask(record)}
+          />
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => viewTaskResult(record)}
+            disabled={!record.result}
           />
           <Popconfirm
             title="确定要删除此任务吗?"
@@ -377,6 +488,23 @@ const TaskManagement: React.FC = () => {
             <Switch />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 结果查看模态框 */}
+      <Modal
+        title={`${currentTaskName} - 执行结果`}
+        open={resultModalVisible}
+        onCancel={() => setResultModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setResultModalVisible(false)}>
+            关闭
+          </Button>
+        ]}
+        width={800}
+      >
+        <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+          <MarkdownRenderer content={currentResult} />
+        </div>
       </Modal>
     </div>
   );
