@@ -2,7 +2,7 @@ export const messages = {
   zh_CN: {
     menu: {
       assistant: '智能助手',
-      dashboard: '运维看板',
+      dashboard: '任务管理',
       tools: '运维工具',
       alerts: '告警中心',
       settings: '系统设置',
@@ -18,7 +18,7 @@ export const messages = {
   en_US: {
     menu: {
       assistant: 'AI Assistant',
-      dashboard: 'Dashboard',
+      dashboard: 'Task Management',
       tools: 'Tools',
       alerts: 'Alerts',
       settings: 'Settings',
