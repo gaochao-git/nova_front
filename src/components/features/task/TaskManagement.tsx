@@ -34,7 +34,7 @@ import {
 } from '@ant-design/icons';
 import { useTheme } from '@/lib/theme/theme.context';
 import cronstrue from 'cronstrue';
-import MarkdownRenderer from '@/components/business/markdown/MarkdownRenderer';
+import MarkdownRenderer from '@/components/features/markdown/MarkdownRenderer';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
