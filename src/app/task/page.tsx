@@ -1,7 +1,7 @@
 'use client';
 
 import RootLayout from '@/components/layout/RootLayout';
-import TaskManagement from '@/components/features/task/TaskManagement';
+import TaskManagement from './TaskManagement';
 
 export default function TaskPage() {
   return (

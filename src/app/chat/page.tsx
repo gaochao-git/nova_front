@@ -1,7 +1,7 @@
 'use client';
 
 import RootLayout from '@/components/layout/RootLayout';
-import ChatWindow from '@/components/features/chat/ChatWindow';
+import ChatWindow from './ChatWindow';
 
 export default function ChatPage() {
   return (

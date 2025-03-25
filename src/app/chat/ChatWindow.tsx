@@ -34,7 +34,7 @@ import {
 } from '@ant-design/icons';
 import { Badge, Button, Space, message as antMessage, theme } from 'antd';
 // 导入渲染函数
-import { renderMarkdown } from '../markdown/MarkdownRenderer';
+import { renderMarkdown } from '@/components/shared/MarkdownRenderer';
 // 导入 Next.js 的 Image 组件
 import Image from 'next/image';
 
