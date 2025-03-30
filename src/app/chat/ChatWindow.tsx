@@ -229,7 +229,7 @@ const roles = {
 };
 // Dify API configuration
 const baseUrl = 'http://127.0.0.1';
-const apiKey = 'Bearer app-s1LO3fgBHF0vJc0l9wbmutn8';
+const apiKey = 'Bearer app-A3syvhBIZWtrbu0xMsos1EFT';
 const systemPrompt = '你是一个通用AI助手，可以回答各种日常问题。';
 
 function createDifyStream(message: string, inputs = {}, conversationId?: string, files = []) {
