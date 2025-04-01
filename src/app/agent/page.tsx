@@ -1,275 +1,286 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Typography, 
-  Space, 
-  Select, 
-  Input, 
-  Button, 
-  Table, 
-  Tag, 
-  Divider, 
-  Form,
-  Row,
-  Col,
-  Tooltip
-} from 'antd';
-import { PlusOutlined, LineChartOutlined, WarningOutlined, InfoCircleOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import React, { useState } from 'react';
+import { Card, Input, Button, Tabs, Row, Col, Typography, Space, Tag, Avatar } from 'antd';
+import { SearchOutlined, PlusOutlined, HeartOutlined, EyeOutlined, UserOutlined, StarOutlined } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
+const { Title, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
-// Mock data - would be replaced with real API calls
-const MOCK_HOSTS = [
-  { value: '192.168.1.100', label: 'Web Server (192.168.1.100)' },
-  { value: '192.168.1.101', label: 'Database Server (192.168.1.101)' },
-  { value: '192.168.1.102', label: 'Application Server (192.168.1.102)' },
-  { value: '192.168.1.103', label: 'Cache Server (192.168.1.103)' },
-];
+const AgentPage: React.FC = () => {
+  const [searchValue, setSearchValue] = useState('');
+  const [activeButton, setActiveButton] = useState('create'); // First-level filter
+  const [activeCategory, setActiveCategory] = useState('all'); // Second-level filter
 
-const MOCK_METRICS = [
-  { value: 'cpu_usage', label: 'CPU Usage (%)' },
-  { value: 'memory_usage', label: 'Memory Usage (%)' },
-  { value: 'disk_usage', label: 'Disk Usage (%)' },
-  { value: 'network_in', label: 'Network In (Mbps)' },
-  { value: 'network_out', label: 'Network Out (Mbps)' },
-  { value: 'iops', label: 'IOPS' },
-];
+  // Enhanced data structure for agents with categories
+  const agentCategories = [
+    { key: 'all', name: '全部分类' },
+    { key: 'troubleshooting', name: '故障排查' },
+    { key: 'log_analysis', name: '日志分析' },
+    { key: 'code', name: '代码' },
+    { key: 'security_audit', name: '安全审计' },
+    { key: 'other', name: '其他' },
+  ];
 
-interface TrendRule {
-  id: string;
-  hostIp: string;
-  metricName: string;
-  ruleDescription: string;
-  status: 'active' | 'triggered' | 'disabled';
-  createdAt: string;
-}
-
-// Sample rules
-const MOCK_RULES: TrendRule[] = [
-  {
-    id: '1',
-    hostIp: '192.168.1.100',
-    metricName: 'cpu_usage',
-    ruleDescription: '如果CPU使用率在未来30分钟内预计超过90%，发送告警',
-    status: 'active',
-    createdAt: '2023-03-24 10:30:00',
-  },
-  {
-    id: '2',
-    hostIp: '192.168.1.101',
-    metricName: 'memory_usage',
-    ruleDescription: '如果内存使用量在1小时内呈指数增长趋势，发送告警',
-    status: 'triggered',
-    createdAt: '2023-03-23 15:45:00',
-  },
-];
-
-const TrendAlertsPage = () => {
-  const [form] = Form.useForm();
-  const [rules, setRules] = useState<TrendRule[]>(MOCK_RULES);
-  
-  // Form handling
-  const handleAddRule = (values: any) => {
-    const newRule: TrendRule = {
-      id: Date.now().toString(),
-      hostIp: values.hostIp,
-      metricName: values.metricName,
-      ruleDescription: values.ruleDescription,
-      status: 'active',
-      createdAt: new Date().toLocaleString(),
-    };
-    
-    setRules([...rules, newRule]);
-    form.resetFields();
-  };
-  
-  const handleDeleteRule = (id: string) => {
-    setRules(rules.filter(rule => rule.id !== id));
-  };
-  
-  const columns: ColumnsType<TrendRule> = [
+  // Mock data for featured agents with section and category information
+  const featuredAgents = [
     {
-      title: '主机IP',
-      dataIndex: 'hostIp',
-      key: 'hostIp',
-      render: (ip) => {
-        const host = MOCK_HOSTS.find(h => h.value === ip);
-        return host ? host.label : ip;
-      }
+      id: '1',
+      name: '健康助手',
+      avatar: '/images/agents/health.png',
+      description: 'TA是您贴身的健康助手，随时准备为您的私人健康提供建议',
+      likes: '2000+',
+      views: '8000+',
+      favorites: '500+',
+      official: true,
+      section: 'discover',
+      categories: ['log_analysis', 'all'],
     },
     {
-      title: '指标名称',
-      dataIndex: 'metricName',
-      key: 'metricName',
-      render: (metric) => {
-        const metricObj = MOCK_METRICS.find(m => m.value === metric);
-        return metricObj ? metricObj.label : metric;
-      }
+      id: '2',
+      name: '互联网黑话大师',
+      avatar: '/images/agents/internet.png',
+      description: '深谙互联网底层逻辑，在垂直赛道深耕细作，具有全栈思维',
+      likes: '300+',
+      views: '1000+',
+      favorites: '120+',
+      official: true,
+      section: 'discover',
+      categories: ['code', 'other', 'all'],
     },
     {
-      title: '趋势预测规则',
-      dataIndex: 'ruleDescription',
-      key: 'ruleDescription',
-      width: '35%',
+      id: '3',
+      name: '厚涂风小画家',
+      avatar: '/images/agents/artist.png',
+      description: '一个特别擅长绘制厚涂风格的高手',
+      likes: '300+',
+      views: '6000+',
+      favorites: '200+',
+      official: true,
+      section: 'discover',
+      categories: ['troubleshooting', 'all'],
+    },
+    // Example of a user's own agent
+    {
+      id: '4',
+      name: '我的助手',
+      avatar: '/images/agents/assistant.png',
+      description: '我创建的个人助手',
+      likes: '5+',
+      views: '20+',
+      favorites: '0+',
+      official: false,
+      section: 'my',
+      categories: ['log_analysis', 'all'],
+    },
+    // Example of a favorite agent
+    {
+      id: '5',
+      name: '旅行规划师',
+      avatar: '/images/agents/travel.png',
+      description: '帮您规划完美旅行路线，提供景点和美食推荐',
+      likes: '1500+',
+      views: '5000+',
+      favorites: '300+',
+      official: true,
+      section: 'favorites',
+      categories: ['log_analysis', 'all'],
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        let color = 'blue';
-        let text = '活跃';
-        
-        if (status === 'triggered') {
-          color = 'red';
-          text = '已触发';
-        } else if (status === 'disabled') {
-          color = 'gray';
-          text = '已禁用';
-        }
-        
-        return <Tag color={color}>{text}</Tag>;
-      }
+      id: '6',
+      name: '代码助手',
+      avatar: '/images/agents/coding.png',
+      description: '解决编程问题，提供代码示例和最佳实践',
+      likes: '800+',
+      views: '3000+',
+      favorites: '100+',
+      official: true,
+      section: 'favorites',
+      categories: ['code', 'all'],
+    },
+    // Adding Python and Java specific code assistants
+    {
+      id: '7',
+      name: 'Python助手',
+      avatar: '/images/agents/python.png',
+      description: '专注于Python编程问题，提供代码优化和调试建议',
+      likes: '1200+',
+      views: '4500+',
+      favorites: '200+',
+      official: true,
+      section: 'discover',
+      categories: ['code', 'all'],
     },
     {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-    },
-    {
-      title: '操作',
-      key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Button 
-            type="text" 
-            icon={<LineChartOutlined />} 
-            title="查看趋势"
-          />
-          <Button 
-            type="text" 
-            danger 
-            icon={<DeleteOutlined />} 
-            title="删除规则"
-            onClick={() => handleDeleteRule(record.id)}
-          />
-        </Space>
-      )
+      id: '8',
+      name: 'Java助手',
+      avatar: '/images/agents/java.png',
+      description: '帮助解决Java开发中的问题，包括Spring框架和企业级应用开发',
+      likes: '950+',
+      views: '3800+',
+      favorites: '150+',
+      official: true,
+      section: 'discover',
+      categories: ['code', 'all'],
     },
   ];
 
-  return (
-    <div className="trend-alerts-container">
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Card>
-          <Title level={4}>
-            <Space>
-              <WarningOutlined />
-              趋势预警
-            </Space>
-          </Title>
-          <Text type="secondary">
-            基于Zabbix监控指标的趋势变化进行预测和预警，通过自然语言描述预警规则
-          </Text>
-          
-          <Divider />
-          
-          <Form
-            form={form}
-            name="trend_alert_form"
-            layout="vertical"
-            onFinish={handleAddRule}
-          >
-            <Row gutter={24}>
-              <Col span={8}>
-                <Form.Item
-                  name="hostIp"
-                  label="选择主机"
-                  rules={[{ required: true, message: '请选择主机' }]}
-                >
-                  <Select 
-                    placeholder="选择需要监控的主机" 
-                    showSearch
-                    optionFilterProp="label"
-                  >
-                    {MOCK_HOSTS.map(host => (
-                      <Option key={host.value} value={host.value} label={host.label}>
-                        {host.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={8}>
-                <Form.Item
-                  name="metricName"
-                  label="选择指标"
-                  rules={[{ required: true, message: '请选择指标' }]}
-                >
-                  <Select 
-                    placeholder="选择需要监控的指标" 
-                    showSearch
-                    optionFilterProp="label"
-                  >
-                    {MOCK_METRICS.map(metric => (
-                      <Option key={metric.value} value={metric.value} label={metric.label}>
-                        {metric.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={24}>
-                <Form.Item
-                  name="ruleDescription"
-                  label={
-                    <Space>
-                      <span>趋势预测规则</span>
-                      <Tooltip title="使用自然语言描述预警规则，例如：如果CPU使用率在未来30分钟内预计超过90%，发送告警">
-                        <InfoCircleOutlined />
-                      </Tooltip>
-                    </Space>
-                  }
-                  rules={[{ required: true, message: '请输入趋势预测规则描述' }]}
-                >
-                  <TextArea
-                    placeholder="使用自然语言描述预警规则，例如：如果CPU使用率在未来30分钟内预计超过90%，发送告警"
-                    autoSize={{ minRows: 2, maxRows: 4 }}
-                  />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Form.Item>
-              <Button type="primary" htmlType="submit" icon={<PlusOutlined />}>
-                添加规则
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+  // Apply three-level filtering: section, category, and search
+  const filteredAgents = featuredAgents.filter(agent => {
+    // First-level filter (section)
+    // For 'discover', show all agents from all sections
+    const sectionMatch = 
+      (activeButton === 'discover') ? 
+      true : // Show all agents when 'discover' is selected
+      (agent.section === activeButton);
+    
+    // Second-level filter (category)
+    const categoryMatch = agent.categories.includes(activeCategory);
+    
+    // Search filter (name or description)
+    const searchMatch = searchValue === '' || 
+      agent.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+      agent.description.toLowerCase().includes(searchValue.toLowerCase());
+    
+    return sectionMatch && categoryMatch && searchMatch;
+  });
 
-        <Card>
-          <Title level={4}>
-            <Space>
-              <LineChartOutlined />
-              趋势预警规则列表
-            </Space>
-          </Title>
-          
-          <Table
-            columns={columns}
-            dataSource={rules}
-            rowKey="id"
-            pagination={{ pageSize: 10 }}
+  return (
+    <div className="agent-page" style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <Title level={2} style={{ marginBottom: '8px' }}>想法的无限可能</Title>
+          <Title level={4} style={{ color: '#6366f1', fontWeight: 'normal' }}>这里有你的最佳创意伙伴</Title>
+        </div>
+        <div style={{ width: '50%', display: 'flex', justifyContent: 'flex-end' }}>
+          <Input 
+            prefix={<SearchOutlined />} 
+            placeholder="万千智能，一搜即达" 
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            style={{ borderRadius: '20px', maxWidth: '400px' }}
           />
-        </Card>
-      </Space>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />} 
+          size="large"
+          style={{ 
+            borderRadius: '20px',
+            background: activeButton === 'create' ? '#6366f1' : '#fff',
+            color: activeButton === 'create' ? '#fff' : '#6366f1',
+            borderColor: '#6366f1'
+          }}
+          onClick={() => setActiveButton('create')}
+        >
+          创建智能体
+        </Button>
+        <Button
+          type="primary"
+          size="large"
+          style={{ 
+            borderRadius: '20px',
+            background: activeButton === 'discover' ? '#6366f1' : '#fff',
+            color: activeButton === 'discover' ? '#fff' : '#6366f1',
+            borderColor: '#6366f1'
+          }}
+          onClick={() => setActiveButton('discover')}
+        >
+          发现智能体
+        </Button>
+        <Button
+          type="primary"
+          size="large"
+          style={{ 
+            borderRadius: '20px',
+            background: activeButton === 'my' ? '#6366f1' : '#fff',
+            color: activeButton === 'my' ? '#fff' : '#6366f1',
+            borderColor: '#6366f1'
+          }}
+          onClick={() => setActiveButton('my')}
+        >
+          我的智能体
+        </Button>
+        <Button
+          type="primary"
+          size="large"
+          style={{ 
+            borderRadius: '20px',
+            background: activeButton === 'favorites' ? '#6366f1' : '#fff',
+            color: activeButton === 'favorites' ? '#fff' : '#6366f1',
+            borderColor: '#6366f1'
+          }}
+          onClick={() => setActiveButton('favorites')}
+        >
+          我收藏的智能体
+        </Button>
+      </div>
+
+      <Tabs 
+        activeKey={activeCategory} 
+        onChange={setActiveCategory} 
+        style={{ marginBottom: '24px' }}
+      >
+        {agentCategories.map(category => (
+          <TabPane tab={category.name} key={category.key} />
+        ))}
+      </Tabs>
+
+      {/* Conditional content based on active button */}
+      {activeButton === 'create' ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <Title level={4}>创建您自己的智能体</Title>
+          <Paragraph>在这里您可以创建自定义的智能体</Paragraph>
+          <Button type="primary" icon={<PlusOutlined />} size="large">
+            开始创建
+          </Button>
+        </div>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {filteredAgents.map(agent => (
+            <Col xs={24} sm={12} md={8} key={agent.id}>
+              <Card hoverable style={{ borderRadius: '12px', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
+                  <Avatar 
+                    size={64} 
+                    src={agent.avatar} 
+                    icon={<UserOutlined />} 
+                    style={{ 
+                      marginRight: '12px',
+                      backgroundColor: '#f0f0f0', // Light gray background
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      borderRadius: '50%' // Ensure circular shape
+                    }}
+                  />
+                  <div>
+                    <Title level={5} style={{ margin: 0 }}>{agent.name}</Title>
+                    <Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>
+                      {agent.description}
+                    </Paragraph>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space>
+                    <span><HeartOutlined /> {agent.likes}</span>
+                    <span><EyeOutlined /> {agent.views}</span>
+                    <span><StarOutlined /> {agent.favorites}</span>
+                  </Space>
+                  {agent.official && (
+                    <Tag color="blue">官方</Tag>
+                  )}
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
     </div>
   );
 };
 
-export default TrendAlertsPage; 
+export default AgentPage;
