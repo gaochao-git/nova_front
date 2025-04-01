@@ -58,9 +58,9 @@ const RootLayout: React.FC<IRootLayoutProps> = ({ children }) => {
       label: t.menu.task,
     },
     {
-      key: '/tools',
-      icon: <ToolOutlined />,
-      label: t.menu.tools,
+      key: '/trendAlerts',
+      icon: <AlertOutlined />,
+      label: t.menu.trendAlerts,
     },
     {
       key: '/alerts',
