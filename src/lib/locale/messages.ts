@@ -1,9 +1,9 @@
 export const messages = {
   zh_CN: {
     menu: {
-      assistant: '通用助手',
+      assistant: '对话',
       task: '任务管理',
-      trendAlerts: '趋势预警',
+      trendAlerts: '智能体管理',
       alerts: '告警中心',
       settings: '系统设置',
     },
@@ -17,9 +17,9 @@ export const messages = {
   },
   en_US: {
     menu: {
-      assistant: 'General Assistant',
+      assistant: 'Chat',
       task: 'Task Management',
-      trendAlerts: 'Trend Alerts',
+      trendAlerts: 'Agent Management',
       alerts: 'Alerts',
       settings: 'Settings',
     },
