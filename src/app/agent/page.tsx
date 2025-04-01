@@ -9,7 +9,7 @@ const { TabPane } = Tabs;
 
 const AgentPage: React.FC = () => {
   const [searchValue, setSearchValue] = useState('');
-  const [activeButton, setActiveButton] = useState('create'); // First-level filter
+  const [activeButton, setActiveButton] = useState('discover'); // Changed default to 'discover'
   const [activeCategory, setActiveCategory] = useState('all'); // Second-level filter
 
   // Enhanced data structure for agents with categories
