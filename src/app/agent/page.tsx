@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, Input, Button, Tabs, Row, Col, Typography, Space, Tag, Avatar } from 'antd';
-import { SearchOutlined, PlusOutlined, HeartOutlined, EyeOutlined, UserOutlined, StarOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Tabs, Row, Col, Typography, Space, Tag, Avatar, Modal, Form, Select, Upload, Divider, message } from 'antd';
+import { SearchOutlined, PlusOutlined, HeartOutlined, EyeOutlined, UserOutlined, StarOutlined, UploadOutlined } from '@ant-design/icons';
+import { useRouter } from 'next/navigation';
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
+const { TextArea } = Input;
+const { Option } = Select;
 
 const AgentPage: React.FC = () => {
+  const router = useRouter();
   const [searchValue, setSearchValue] = useState('');
-  const [activeButton, setActiveButton] = useState('discover'); // Changed default to 'discover'
-  const [activeCategory, setActiveCategory] = useState('all'); // Second-level filter
+  const [activeButton, setActiveButton] = useState('discover'); // Default to discover
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  // Enhanced data structure for agents with categories
+  // Categories for the agent
   const agentCategories = [
     { key: 'all', name: '全部分类' },
     { key: 'troubleshooting', name: '故障排查' },
@@ -145,6 +152,28 @@ const AgentPage: React.FC = () => {
     return sectionMatch && categoryMatch && searchMatch;
   });
 
+  const showCreateModal = () => {
+    setIsCreateModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    setIsCreateModalVisible(false);
+    form.resetFields();
+  };
+
+  const onFinish = (values: any) => {
+    setLoading(true);
+    console.log('Form values:', values);
+    
+    // Simulate API call
+    setTimeout(() => {
+      setLoading(false);
+      message.success('智能体创建成功！');
+      setIsCreateModalVisible(false);
+      form.resetFields();
+    }, 1500);
+  };
+
   return (
     <div className="agent-page" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -234,7 +263,7 @@ const AgentPage: React.FC = () => {
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Title level={4}>创建您自己的智能体</Title>
           <Paragraph>在这里您可以创建自定义的智能体</Paragraph>
-          <Button type="primary" icon={<PlusOutlined />} size="large">
+          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={showCreateModal}>
             开始创建
           </Button>
         </div>
@@ -279,6 +308,103 @@ const AgentPage: React.FC = () => {
           ))}
         </Row>
       )}
+
+      {/* Create Agent Modal */}
+      <Modal
+        title="创建新智能体"
+        open={isCreateModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          initialValues={{ categories: ['other'] }}
+        >
+          <Form.Item
+            name="name"
+            label="智能体名称"
+            rules={[{ required: true, message: '请输入智能体名称' }]}
+          >
+            <Input placeholder="给您的智能体起个名字" />
+          </Form.Item>
+          
+          <Form.Item
+            name="description"
+            label="智能体描述"
+            rules={[{ required: true, message: '请输入智能体描述' }]}
+          >
+            <TextArea 
+              placeholder="描述这个智能体的功能和特点" 
+              rows={4} 
+            />
+          </Form.Item>
+          
+          <Form.Item
+            name="categories"
+            label="分类"
+            rules={[{ required: true, message: '请选择至少一个分类' }]}
+          >
+            <Select mode="multiple" placeholder="选择分类">
+              {agentCategories.filter(cat => cat.key !== 'all').map(category => (
+                <Option key={category.key} value={category.key}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="difyBackendUrl"
+            label="Dify后端地址"
+            rules={[
+              { required: true, message: '请输入Dify后端地址' },
+              { type: 'url', message: '请输入有效的URL地址' }
+            ]}
+          >
+            <Input placeholder="例如: https://api.dify.ai/v1" />
+          </Form.Item>
+          
+          <Form.Item
+            name="difyApiKey"
+            label="Dify API Key"
+            rules={[{ required: true, message: '请输入Dify API Key' }]}
+          >
+            <Input.Password placeholder="输入您的Dify API Key" />
+          </Form.Item>
+          
+          <Divider />
+          
+          <Form.Item
+            name="instructions"
+            label="智能体指令"
+            rules={[{ required: true, message: '请输入智能体指令' }]}
+          >
+            <TextArea 
+              placeholder="输入详细的指令，告诉智能体应该如何工作" 
+              rows={6} 
+            />
+          </Form.Item>
+          
+          <Form.Item>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={loading}
+              style={{ 
+                borderRadius: '20px',
+                background: '#6366f1',
+                width: '100%',
+                height: '40px'
+              }}
+            >
+              创建智能体
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
