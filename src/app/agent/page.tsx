@@ -171,6 +171,9 @@ const AgentPage: React.FC = () => {
       message.success('智能体创建成功！');
       setIsCreateModalVisible(false);
       form.resetFields();
+      
+      // Switch to "我的智能体" tab after creation
+      setActiveButton('my');
     }, 1500);
   };
 
@@ -263,7 +266,17 @@ const AgentPage: React.FC = () => {
         <div style={{ textAlign: 'center', padding: '40px 0' }}>
           <Title level={4}>创建您自己的智能体</Title>
           <Paragraph>在这里您可以创建自定义的智能体</Paragraph>
-          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={showCreateModal}>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            size="large" 
+            onClick={showCreateModal}
+            style={{ 
+              borderRadius: '20px',
+              background: '#6366f1',
+              height: '40px'
+            }}
+          >
             开始创建
           </Button>
         </div>
