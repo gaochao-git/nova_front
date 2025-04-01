@@ -3,7 +3,7 @@ export const messages = {
     menu: {
       assistant: '对话',
       task: '任务管理',
-      trendAlerts: '智能体管理',
+      agent: '智能体',
       alerts: '告警中心',
       settings: '系统设置',
     },
@@ -19,7 +19,7 @@ export const messages = {
     menu: {
       assistant: 'Chat',
       task: 'Task Management',
-      trendAlerts: 'Agent Management',
+      agent: 'Agent',
       alerts: 'Alerts',
       settings: 'Settings',
     },

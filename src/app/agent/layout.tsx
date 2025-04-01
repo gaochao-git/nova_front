@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: '基于Zabbix指标变化趋势进行预警',
 };
 
-export default function TrendAlertsLayout({
+export default function AgentLayout({
   children,
 }: {
   children: React.ReactNode;
